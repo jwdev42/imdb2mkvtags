@@ -11,11 +11,25 @@ import (
 	"os"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		return
+func write(file *os.File, data *modtag.Movie) {
+	if file != os.Stdout {
+		defer file.Close()
 	}
-	url, err := modimdb.Id2Url(os.Args[1])
+	if err := modtag.WriteTags(file, data.WriteTag); err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing output: %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func main() {
+
+	flags := cmdFlags()
+
+	if len(flags.tail) < 1 {
+		fmt.Fprintf(os.Stderr, "No IMDB title id found\n")
+		os.Exit(0)
+	}
+	url, err := modimdb.Id2Url(flags.tail[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid Input: %s\n", err)
 		os.Exit(1)
@@ -30,9 +44,16 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error while extracting movie schema: %s\n", err)
 		os.Exit(1)
 	}
-	movie := sMovie.Convert()
-	if err := modtag.WriteTags(os.Stdout, movie.WriteTag); err != nil {
-		fmt.Fprintf(os.Stderr, "Error on xml output: %s\n", err)
-		os.Exit(1)
+	var file *os.File
+	if *flags.out != "" {
+		var err error
+		file, err = os.Create(*flags.out)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			os.Exit(1)
+		}
+	} else {
+		file = os.Stdout
 	}
+	write(file, sMovie.Convert())
 }
