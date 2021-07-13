@@ -1,12 +1,12 @@
 //This file is part of imdb2mkvtags ©2021 Jörg Walter
 
-package modimdb
+package imdb
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jwdev42/imdb2mkvtags/modimdb/schema"
+	"github.com/jwdev42/imdb2mkvtags/internal/imdb/schema"
 	"github.com/jwdev42/rottensoup"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"

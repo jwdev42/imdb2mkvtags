@@ -1,6 +1,6 @@
 //This file is part of imdb2mkvtags ©2021 Jörg Walter
 
-package modhttp
+package http
 
 import (
 	"io"
