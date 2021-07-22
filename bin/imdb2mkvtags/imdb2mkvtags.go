@@ -3,14 +3,12 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	ihttp "github.com/jwdev42/imdb2mkvtags/internal/http"
-	"github.com/jwdev42/imdb2mkvtags/internal/imdb"
+	"github.com/jwdev42/imdb2mkvtags/internal/cmdline"
+	"github.com/jwdev42/imdb2mkvtags/internal/controller"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"os"
-	"strings"
 )
 
 func die(err error) {
@@ -29,41 +27,28 @@ func write(file *os.File, data *tags.Movie) {
 
 func main() {
 
-	flags := cmdFlags()
+	flags := cmdline.Parse()
 
-	if len(flags.tail) < 1 {
-		die(errors.New("No IMDB title id found"))
+	if len(flags.Tail) < 1 {
+		die(errors.New("No URL found"))
 	}
-	url, err := imdb.Id2Url(flags.tail[0])
+	c, err := controller.Pick(flags.Tail[0])
 	if err != nil {
-		die(fmt.Errorf("Invalid Input: %s", err))
+		die(err)
 	}
-	req, err := ihttp.NewBareReq("GET", url, nil)
-	if err != nil {
-		die(fmt.Errorf("Could not create HTTP request: %s", err))
-	}
-	if len(*flags.lang) > 0 {
-		if err := ihttp.SetReqAccLang(req, strings.Split(*flags.lang, ",")...); err != nil {
-			die(fmt.Errorf("Could not set header for \"Accept-Language\": %s", err))
-		}
-	}
-	buf := new(bytes.Buffer)
-	if err := ihttp.Body(nil, req, buf); err != nil {
-		die(fmt.Errorf("Error receiving webpage: %s", err))
-	}
-	sMovie, err := imdb.ExtractMovieSchema(buf)
+	movie, err := c.Scrape()
 	if err != nil {
 		die(fmt.Errorf("Error while extracting movie schema: %s", err))
 	}
 	var file *os.File
-	if *flags.out != "" {
+	if *flags.Out != "" {
 		var err error
-		file, err = os.Create(*flags.out)
+		file, err = os.Create(*flags.Out)
 		if err != nil {
 			die(err)
 		}
 	} else {
 		file = os.Stdout
 	}
-	write(file, sMovie.Convert())
+	write(file, movie)
 }
