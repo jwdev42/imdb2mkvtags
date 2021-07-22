@@ -16,9 +16,9 @@ type Flags struct {
 
 func Parse() *Flags {
 	f := new(Flags)
-	f.Out = flag.String("o", "", "sets the output file")
-	f.Lang = flag.String("lang", "", "sets the preferred language for http requests")
-	f.Imdb = flag.String("imdb", "", "options for the imdb scraper, separated by a colon")
+	f.Out = flag.String("o", "", "Sets the output file.")
+	f.Lang = flag.String("lang", "", "Sets the preferred language(s) for http requests. Multiple languages are separated by a colon.")
+	f.Imdb = flag.String("imdb", "", "Options for the imdb scraper, separated by a colon.")
 	flag.Parse()
 	f.Tail = flag.Args()
 	return f

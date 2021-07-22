@@ -36,6 +36,9 @@ func main() {
 	if err != nil {
 		die(err)
 	}
+	if err := c.SetOptions(flags); err != nil {
+		die(fmt.Errorf("Could not set scraper options: %s", err))
+	}
 	movie, err := c.Scrape()
 	if err != nil {
 		die(fmt.Errorf("Error while extracting movie schema: %s", err))

@@ -3,12 +3,16 @@ package imdb
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"github.com/jwdev42/imdb2mkvtags/internal/cmdline"
 	ihttp "github.com/jwdev42/imdb2mkvtags/internal/http"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"net/url"
+	"strconv"
+	"strings"
 )
 
-type Options struct {
+type options struct {
 	UseJsonLD   bool
 	UseFullCast bool
 	Languages   []string
@@ -16,7 +20,7 @@ type Options struct {
 
 type Controller struct {
 	u *url.URL
-	o *Options
+	o *options
 }
 
 func NewController(rawurl string) (*Controller, error) {
@@ -26,7 +30,7 @@ func NewController(rawurl string) (*Controller, error) {
 	}
 	return &Controller{
 		u: u,
-		o: &Options{
+		o: &options{
 			UseJsonLD:   true,
 			UseFullCast: false,
 			Languages:   []string{"en-US"},
@@ -34,9 +38,46 @@ func NewController(rawurl string) (*Controller, error) {
 	}, nil
 }
 
-//Sets controller options, argument must be a ptr to imdb.Options. Always returns nil
-func (r *Controller) SetOptions(options interface{}) error {
-	r.o = options.(*Options)
+//Parses controller options. Reconfigures the controller after parsing was successful.
+func (r *Controller) SetOptions(flags *cmdline.Flags) error {
+	const delimArgs = ":" //delimiter to separate different arguments.
+	const delimKV = "="   //delimiter to separate each argument from its value.
+
+	parseBool := func(str string, val *bool) error {
+		b, err := strconv.ParseBool(str)
+		if err != nil {
+			return err
+		}
+		*val = b
+		return nil
+	}
+
+	//Parse imdb options
+	if flags.Imdb != nil && *flags.Imdb != "" {
+		pairs := strings.Split(*flags.Imdb, delimArgs)
+		for _, pair := range pairs {
+			arg := strings.Split(pair, delimKV)
+			if len(arg) != 2 {
+				return fmt.Errorf("Malformed argument: %s", pair)
+			}
+			switch arg[0] {
+			case "jsonld":
+				if err := parseBool(arg[1], &r.o.UseJsonLD); err != nil {
+					return fmt.Errorf("Malformed argument value: %s", pair)
+				}
+			case "fullcast":
+				if err := parseBool(arg[1], &r.o.UseFullCast); err != nil {
+					return fmt.Errorf("Malformed argument value: %s", pair)
+				}
+			}
+		}
+	}
+
+	//Parse language option
+	if flags.Lang != nil && *flags.Lang != "" {
+		r.o.Languages = strings.Split(*flags.Lang, delimArgs)
+	}
+
 	return nil
 }
 

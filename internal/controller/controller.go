@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"github.com/jwdev42/imdb2mkvtags/internal/cmdline"
 	"github.com/jwdev42/imdb2mkvtags/internal/imdb"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"net/url"
@@ -9,7 +10,7 @@ import (
 
 type Controller interface {
 	Scrape() (*tags.Movie, error)
-	SetOptions(options interface{}) error
+	SetOptions(options *cmdline.Flags) error
 }
 
 func Pick(rawurl string) (Controller, error) {
