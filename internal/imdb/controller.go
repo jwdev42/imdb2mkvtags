@@ -2,7 +2,6 @@ package imdb
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/jwdev42/imdb2mkvtags/internal/cmdline"
 	ihttp "github.com/jwdev42/imdb2mkvtags/internal/http"
@@ -82,6 +81,7 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 }
 
 func (r *Controller) Scrape() (*tags.Movie, error) {
+	var tags *tags.Movie
 	req, err := ihttp.NewBareReq("GET", r.u.String(), nil)
 	if err != nil {
 		return nil, err
@@ -102,9 +102,39 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		if err != nil {
 			return nil, err
 		}
-		return json.Convert(), nil
+		tags = json.Convert()
 	} else {
-		panic("UseJsonLD must be true at the moment")
+		panic("UseJsonLD must be true for now")
 	}
-	return nil, errors.New("You aren't supposed to be here")
+
+	if r.o.UseFullCast {
+		u, err := TitleUrl2CreditsUrl(r.u.String())
+		if err != nil {
+			return nil, err
+		}
+		req, err := ihttp.NewBareReq("GET", u, nil)
+		if err != nil {
+			return nil, err
+		}
+		if len(r.o.Languages) > 0 {
+			if err := ihttp.SetReqAccLang(req, r.o.Languages...); err != nil {
+				return nil, err
+			}
+		}
+		body := new(bytes.Buffer)
+		if err := ihttp.Body(nil, req, body); err != nil {
+			return nil, err
+		}
+		credits, err := NewCredits(body)
+		if err != nil {
+			return nil, err
+		}
+		actors, err := credits.Cast()
+		if err != nil {
+			return nil, err
+		}
+		tags.Actors = actors
+	}
+
+	return tags, nil
 }

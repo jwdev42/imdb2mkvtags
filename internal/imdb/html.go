@@ -13,6 +13,7 @@ import (
 	"io"
 )
 
+//Scrapes the json-ld data from an imdb page and loads it into a movie schema object.
 func ExtractMovieSchema(src io.Reader) (*schema.Movie, error) {
 	root, err := html.Parse(src)
 	if err != nil {

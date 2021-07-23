@@ -5,6 +5,8 @@ package imdb
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 )
 
 //Convert an IMDB ID string to its corresponding https URL string
@@ -47,4 +49,13 @@ func Id2Url(id string) (string, error) {
 	default:
 		return "", fmt.Errorf("%s or unsupported prefix", errMsg)
 	}
+}
+
+func TitleUrl2CreditsUrl(title string) (string, error) {
+	u, err := url.Parse(title)
+	if err != nil {
+		return "", err
+	}
+	u.Path = strings.TrimRight(u.Path, "/") + "/fullcredits"
+	return u.String(), nil
 }
