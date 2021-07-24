@@ -51,9 +51,9 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 		return nil
 	}
 
-	//Parse imdb options
-	if flags.Imdb != nil && *flags.Imdb != "" {
-		pairs := strings.Split(*flags.Imdb, delimArgs)
+	//Parse scraper-specific options
+	if flags.Opts != nil && *flags.Opts != "" {
+		pairs := strings.Split(*flags.Opts, delimArgs)
 		for _, pair := range pairs {
 			arg := strings.Split(pair, delimKV)
 			if len(arg) != 2 {
