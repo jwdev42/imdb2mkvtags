@@ -4,6 +4,7 @@ package schema
 
 import (
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
+	"html"
 	"strings"
 )
 
@@ -35,7 +36,8 @@ type Movie struct {
 	Keywords      string   `json:"keywords"`
 }
 
-//Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type
+//Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type.
+//Text is HTML unescaped as a side effect.
 func (r *Movie) Convert() *tags.Movie {
 	//Naming convention:
 	//Variables derived from the receiver have the prefix 's' if they can be confused
@@ -47,7 +49,7 @@ func (r *Movie) Convert() *tags.Movie {
 		actors := make([]tags.Actor, 0, len(r.Actors))
 		for _, sActor := range r.Actors {
 			if len(sActor.Name) > 0 {
-				actors = append(actors, tags.Actor{Name: sActor.Name})
+				actors = append(actors, tags.Actor{Name: html.UnescapeString(sActor.Name)})
 			}
 		}
 		if len(actors) > 0 {
@@ -57,23 +59,23 @@ func (r *Movie) Convert() *tags.Movie {
 
 	if len(r.ContentRating) > 0 {
 		movie.ContentRating = make([]tags.ContentRating, 1)
-		movie.ContentRating[0].Rating = r.ContentRating
+		movie.ContentRating[0].Rating = html.UnescapeString(r.ContentRating)
 	}
 
 	if len(r.DatePublished) > 0 {
-		movie.ReleaseDate = tags.UniLingual(r.DatePublished)
+		movie.ReleaseDate = tags.UniLingual(html.UnescapeString(r.DatePublished))
 	}
 
 	if len(r.Description) > 0 {
 		movie.Synopses = make([]tags.MultiLingual, 1)
-		movie.Synopses[0].Text = r.Description
+		movie.Synopses[0].Text = html.UnescapeString(r.Description)
 	}
 
 	if r.Directors != nil && len(r.Directors) > 0 {
 		directors := make([]tags.UniLingual, 0, len(r.Directors))
 		for _, sDirector := range r.Directors {
 			if len(sDirector.Name) > 0 {
-				directors = append(directors, tags.UniLingual(sDirector.Name))
+				directors = append(directors, tags.UniLingual(html.UnescapeString(sDirector.Name)))
 			}
 		}
 		if len(directors) > 0 {
@@ -83,7 +85,7 @@ func (r *Movie) Convert() *tags.Movie {
 	if r.Genres != nil && len(r.Genres) > 0 {
 		genres := make([]tags.MultiLingual, 0, len(r.Genres))
 		for _, sGenre := range r.Genres {
-			genres = append(genres, tags.MultiLingual{Text: sGenre})
+			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre)})
 		}
 		movie.Genres = genres
 	}
@@ -92,13 +94,13 @@ func (r *Movie) Convert() *tags.Movie {
 		kw := strings.Split(r.Keywords, ",")
 		movie.Keywords = make([]tags.UniLingual, len(kw))
 		for i, v := range kw {
-			movie.Keywords[i] = tags.UniLingual(strings.TrimSpace(v))
+			movie.Keywords[i] = tags.UniLingual(html.UnescapeString(strings.TrimSpace(v)))
 		}
 	}
 
 	if len(r.Name) > 0 {
 		movie.Titles = make([]tags.MultiLingual, 1)
-		movie.Titles[0].Text = r.Name
+		movie.Titles[0].Text = html.UnescapeString(r.Name)
 	}
 
 	return movie
