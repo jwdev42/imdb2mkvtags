@@ -31,7 +31,7 @@ func (r *Credits) Cast() ([]tags.Actor, error) {
 	//Get the cast table
 	var table *html.Node
 	{
-		tables := rottensoup.ElementsByTagAndAttr(r.root, "table", html.Attribute{Key: "class", Val: "cast_list"})
+		tables := rottensoup.ElementsByTagAndAttr(r.root, atom.Table, html.Attribute{Key: "class", Val: "cast_list"})
 		if len(tables) < 1 {
 			return nil, errors.New("No cast table found")
 		}
@@ -39,7 +39,7 @@ func (r *Credits) Cast() ([]tags.Actor, error) {
 	}
 
 	actors := make([]tags.Actor, 0, 10)
-	rows := rottensoup.ElementsByTagAndAttr(table, "td", html.Attribute{Key: "class", Val: "primary_photo"})
+	rows := rottensoup.ElementsByTagAndAttr(table, atom.Td, html.Attribute{Key: "class", Val: "primary_photo"})
 	for i, row := range rows {
 		actor, err := r.actor(row)
 		if err != nil {

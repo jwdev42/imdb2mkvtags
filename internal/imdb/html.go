@@ -25,7 +25,7 @@ func ExtractMovieSchema(src io.Reader) (*schema.Movie, error) {
 		return nil, errors.New("No html head tag found")
 	}
 
-	schemas := rottensoup.ElementsByTagAndAttr(root, "script", html.Attribute{Key: "type", Val: "application/ld+json"})
+	schemas := rottensoup.ElementsByTagAndAttr(root, atom.Script, html.Attribute{Key: "type", Val: "application/ld+json"})
 	if len(schemas) < 1 {
 		return nil, errors.New("No movie schema found")
 	}
