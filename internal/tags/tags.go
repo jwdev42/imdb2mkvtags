@@ -1,11 +1,11 @@
 //This file is part of imdb2mkvtags ©2021 Jörg Walter
 
-package modtag
+package tags
 
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/jwdev42/imdb2mkvtags/modxml"
+	ixml "github.com/jwdev42/imdb2mkvtags/internal/xml"
 	"io"
 	"strings"
 )
@@ -15,18 +15,18 @@ type Actor struct {
 	Character string
 }
 
-func (r *Actor) WriteTag(xw *modxml.XmlWriter) error {
-	var fc func(*modxml.XmlWriter) error
+func (r *Actor) WriteTag(xw *ixml.XmlWriter) error {
+	var fc func(*ixml.XmlWriter) error
 	if r.Character != "" {
 		character := make([][2]string, 0, 2)
 		character = append(character, [2]string{"Name", "CHARACTER"})
 		character = append(character, [2]string{"String", r.Character})
-		fc = modxml.GenWriteTagWithSubtags("Simple", character, nil)
+		fc = ixml.GenWriteTagWithSubtags("Simple", character, nil)
 	}
 	actor := make([][2]string, 0, 2)
 	actor = append(actor, [2]string{"Name", "ACTOR"})
 	actor = append(actor, [2]string{"String", r.Name})
-	return modxml.WriteTagWithSubtags(xw, "Simple", actor, fc)
+	return ixml.WriteTagWithSubtags(xw, "Simple", actor, fc)
 }
 
 type ContentRating struct {
@@ -34,7 +34,7 @@ type ContentRating struct {
 	Rating string
 }
 
-func (r *ContentRating) WriteTag(xw *modxml.XmlWriter) error {
+func (r *ContentRating) WriteTag(xw *ixml.XmlWriter) error {
 	subtags := make([][2]string, 0, 2)
 	subtags = append(subtags, [2]string{"Name", "LAW_RATING"})
 	if len(r.Agency) > 0 {
@@ -42,16 +42,16 @@ func (r *ContentRating) WriteTag(xw *modxml.XmlWriter) error {
 	} else {
 		subtags = append(subtags, [2]string{"String", r.Rating})
 	}
-	return modxml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
+	return ixml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
 }
 
 type UniLingual string
 
-func (r UniLingual) WriteTag(xw *modxml.XmlWriter, name string) error {
+func (r UniLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
 	subtags := make([][2]string, 0, 2)
 	subtags = append(subtags, [2]string{"Name", name})
 	subtags = append(subtags, [2]string{"String", string(r)})
-	return modxml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
+	return ixml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
 }
 
 type MultiLingual struct {
@@ -59,14 +59,14 @@ type MultiLingual struct {
 	Lang string
 }
 
-func (r *MultiLingual) WriteTag(xw *modxml.XmlWriter, name string) error {
+func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
 	subtags := make([][2]string, 0, 3)
 	subtags = append(subtags, [2]string{"Name", name})
 	subtags = append(subtags, [2]string{"String", r.Text})
 	if r.Lang != "" {
 		subtags = append(subtags, [2]string{"TagLanguageIETF", r.Lang})
 	}
-	return modxml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
+	return ixml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
 }
 
 type Movie struct {
@@ -76,16 +76,18 @@ type Movie struct {
 	Genres        []MultiLingual
 	Imdb          UniLingual
 	Keywords      []UniLingual
+	Producers     []UniLingual
 	ReleaseDate   UniLingual
 	Synopses      []MultiLingual
 	Titles        []MultiLingual
+	Writers       []UniLingual
 }
 
-func (r *Movie) WriteTag(xw *modxml.XmlWriter) error {
+func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
 
 	if err := xw.EncodeTokens(
-		modxml.NewStartElementSimple("Tag"), modxml.NewStartElementSimple("Targets"),
-		modxml.NewStartElementSimple("TargetTypeValue")); err != nil {
+		ixml.NewStartElementSimple("Tag"), ixml.NewStartElementSimple("Targets"),
+		ixml.NewStartElementSimple("TargetTypeValue")); err != nil {
 		return err
 	}
 	if err := xw.WriteText([]byte("50")); err != nil {
@@ -138,6 +140,12 @@ func (r *Movie) WriteTag(xw *modxml.XmlWriter) error {
 		}
 	}
 
+	for _, producer := range r.Producers {
+		if err := producer.WriteTag(xw, "PRODUCER"); err != nil {
+			return err
+		}
+	}
+
 	if len(r.ReleaseDate) > 0 {
 		if err := r.ReleaseDate.WriteTag(xw, "DATE_RELEASED"); err != nil {
 			return err
@@ -156,6 +164,12 @@ func (r *Movie) WriteTag(xw *modxml.XmlWriter) error {
 		}
 	}
 
+	for _, writer := range r.Writers {
+		if err := writer.WriteTag(xw, "WRITTEN_BY"); err != nil {
+			return err
+		}
+	}
+
 	if err := xw.CloseElement(); err != nil {
 		return err
 	}
@@ -163,13 +177,13 @@ func (r *Movie) WriteTag(xw *modxml.XmlWriter) error {
 }
 
 //Writes the matroska tags as an xml file
-func WriteTags(w io.Writer, tagWriter func(*modxml.XmlWriter) error) error {
-	xw := modxml.NewXmlWriter(w)
+func WriteTags(w io.Writer, tagWriter func(*ixml.XmlWriter) error) error {
+	xw := ixml.NewXmlWriter(w)
 	xw.Indent("", "\t")
 	if err := xw.EncodeToken(xml.ProcInst{Target: "xml", Inst: []byte(`version="1.0" encoding="UTF-8"`)}); err != nil {
 		return err
 	}
-	if err := xw.EncodeToken(modxml.NewStartElementSimple("Tags")); err != nil {
+	if err := xw.EncodeToken(ixml.NewStartElementSimple("Tags")); err != nil {
 		return err
 	}
 	if err := tagWriter(xw); err != nil {
