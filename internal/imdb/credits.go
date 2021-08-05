@@ -54,6 +54,24 @@ func (r *Credits) Cast() ([]tags.Actor, error) {
 	return actors, nil
 }
 
+func (r *Credits) NamesByID(id string) []tags.UniLingual {
+	nodes := r.namesByID(id)
+	if nodes == nil {
+		return nil
+	}
+	names := make([]tags.UniLingual, 0, len(nodes))
+	for _, n := range nodes {
+		text := r.textFromNameCell(n)
+		if text != "" {
+			names = append(names, tags.UniLingual(text))
+		}
+	}
+	if len(names) > 0 {
+		return names
+	}
+	return nil
+}
+
 func (r *Credits) actor(firstCol *html.Node) (*tags.Actor, error) {
 
 	trimmedCellText := func(cell *html.Node) (string, error) {
@@ -103,4 +121,32 @@ func (r *Credits) actor(firstCol *html.Node) (*tags.Actor, error) {
 		}
 	}
 	return actor, nil
+}
+
+//The table that contains the names for a specific class of cast (directors, writers) except actors
+//is preceded by a heading that has an id. This function evaluates the html table that is
+//the heading's sibling and extracts all table cells that contain names. These are then
+//returned as a slice. Nil will be returned if no names were found.
+func (r *Credits) namesByID(id string) []*html.Node {
+	heading := rottensoup.ElementByID(r.root, id)
+	if heading == nil {
+		return nil
+	}
+	table := rottensoup.NextElementSibling(heading)
+	if table.DataAtom != atom.Table {
+		return nil
+	}
+	return rottensoup.ElementsByTagAndAttr(table, atom.Td, html.Attribute{Key: "class", Val: "name"})
+}
+
+func (r *Credits) textFromNameCell(n *html.Node) string {
+	link := rottensoup.FirstElementByTag(n, atom.A)
+	if link == nil {
+		return ""
+	}
+	text := rottensoup.FirstNodeByType(link, html.TextNode)
+	if text == nil {
+		return ""
+	}
+	return strings.TrimSpace(text.Data)
 }

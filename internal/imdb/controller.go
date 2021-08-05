@@ -134,6 +134,15 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 			return nil, err
 		}
 		tags.Actors = actors
+		if directors := credits.NamesByID("director"); directors != nil {
+			tags.Directors = directors
+		}
+		if producers := credits.NamesByID("producer"); producers != nil {
+			tags.Producers = producers
+		}
+		if writers := credits.NamesByID("writer"); writers != nil {
+			tags.Writers = writers
+		}
 	}
 
 	return tags, nil

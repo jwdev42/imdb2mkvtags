@@ -76,9 +76,11 @@ type Movie struct {
 	Genres        []MultiLingual
 	Imdb          UniLingual
 	Keywords      []UniLingual
+	Producers     []UniLingual
 	ReleaseDate   UniLingual
 	Synopses      []MultiLingual
 	Titles        []MultiLingual
+	Writers       []UniLingual
 }
 
 func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
@@ -138,6 +140,12 @@ func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
 		}
 	}
 
+	for _, producer := range r.Producers {
+		if err := producer.WriteTag(xw, "PRODUCER"); err != nil {
+			return err
+		}
+	}
+
 	if len(r.ReleaseDate) > 0 {
 		if err := r.ReleaseDate.WriteTag(xw, "DATE_RELEASED"); err != nil {
 			return err
@@ -152,6 +160,12 @@ func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
 
 	for _, title := range r.Titles {
 		if err := title.WriteTag(xw, "TITLE"); err != nil {
+			return err
+		}
+	}
+
+	for _, writer := range r.Writers {
+		if err := writer.WriteTag(xw, "WRITTEN_BY"); err != nil {
 			return err
 		}
 	}
