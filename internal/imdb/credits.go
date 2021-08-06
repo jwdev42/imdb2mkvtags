@@ -3,6 +3,7 @@ package imdb
 import (
 	"errors"
 	"fmt"
+	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"github.com/jwdev42/rottensoup"
 	"golang.org/x/net/html"
@@ -12,6 +13,7 @@ import (
 	"strings"
 )
 
+//represents "fullcredits" pages https://www.imdb.com/title/$titleID/fullcredits
 type Credits struct {
 	root *html.Node
 }
@@ -60,9 +62,11 @@ func (r *Credits) NamesByID(id string) []tags.UniLingual {
 		return nil
 	}
 	names := make([]tags.UniLingual, 0, len(nodes))
-	for _, n := range nodes {
-		text := r.textFromNameCell(n)
-		if text != "" {
+	for i, n := range nodes {
+		text, err := r.textFromNameCell(n)
+		if err != nil {
+			global.Log.Error(fmt.Errorf("Row %d of table \"%s\": %s", i+1, id, err))
+		} else {
 			names = append(names, tags.UniLingual(text))
 		}
 	}
@@ -139,14 +143,14 @@ func (r *Credits) namesByID(id string) []*html.Node {
 	return rottensoup.ElementsByTagAndAttr(table, atom.Td, html.Attribute{Key: "class", Val: "name"})
 }
 
-func (r *Credits) textFromNameCell(n *html.Node) string {
+func (r *Credits) textFromNameCell(n *html.Node) (string, error) {
 	link := rottensoup.FirstElementByTag(n, atom.A)
 	if link == nil {
-		return ""
+		return "", errors.New("No hyperlink found inside table cell")
 	}
 	text := rottensoup.FirstNodeByType(link, html.TextNode)
 	if text == nil {
-		return ""
+		return "", errors.New("Hyperlink has no child that is a text node")
 	}
-	return strings.TrimSpace(text.Data)
+	return strings.TrimSpace(text.Data), nil
 }

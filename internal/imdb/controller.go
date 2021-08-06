@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/jwdev42/imdb2mkvtags/internal/cmdline"
+	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	ihttp "github.com/jwdev42/imdb2mkvtags/internal/http"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
+	"io"
 	"net/url"
 	"strconv"
 	"strings"
@@ -112,6 +114,16 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 	}
 
 	if r.o.UseFullCast {
+		if err := r.scrapeFullCredits(tags); err != nil {
+			global.Log.Error(err)
+		}
+	}
+
+	return tags, nil
+}
+
+func (r *Controller) scrapeFullCredits(tags *tags.Movie) error {
+	fetchFullCredits := func(u string) (io.Reader, error) {
 		u, err := TitleUrl2CreditsUrl(r.u.String())
 		if err != nil {
 			return nil, err
@@ -129,25 +141,39 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		if err := ihttp.Body(nil, req, body); err != nil {
 			return nil, err
 		}
-		credits, err := NewCredits(body)
-		if err != nil {
-			return nil, err
-		}
-		actors, err := credits.Cast()
-		if err != nil {
-			return nil, err
-		}
-		tags.Actors = actors
-		if directors := credits.NamesByID("director"); directors != nil {
-			tags.Directors = directors
-		}
-		if producers := credits.NamesByID("producer"); producers != nil {
-			tags.Producers = producers
-		}
-		if writers := credits.NamesByID("writer"); writers != nil {
-			tags.Writers = writers
-		}
+		return body, nil
 	}
 
-	return tags, nil
+	body, err := fetchFullCredits(r.u.String())
+	if err != nil {
+		return fmt.Errorf("Fullcredits: Could not fetch page: %s", err)
+	}
+
+	credits, err := NewCredits(body)
+	if err != nil {
+		return fmt.Errorf("Fullcredits: Could not parse document: %s", err)
+	}
+
+	if actors, err := credits.Cast(); err != nil {
+		global.Log.Error(fmt.Errorf("Fullcredits: Could not process cast table: %s", err))
+	} else {
+		tags.Actors = actors
+	}
+
+	if directors := credits.NamesByID("director"); directors != nil {
+		tags.Directors = directors
+	} else {
+		global.Log.Notice("Fullcredits: No directors found")
+	}
+	if producers := credits.NamesByID("producer"); producers != nil {
+		tags.Producers = producers
+	} else {
+		global.Log.Notice("Fullcredits: No producers found")
+	}
+	if writers := credits.NamesByID("writer"); writers != nil {
+		tags.Writers = writers
+	} else {
+		global.Log.Notice("Fullcredits: No writers found")
+	}
+	return nil
 }

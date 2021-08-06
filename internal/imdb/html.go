@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	"github.com/jwdev42/imdb2mkvtags/internal/imdb/schema"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"github.com/jwdev42/rottensoup"
@@ -14,7 +15,7 @@ import (
 	"io"
 )
 
-//represents the title pages https://www.imdb.com/title/$titleID/
+//represents title pages https://www.imdb.com/title/$titleID/
 type Title struct {
 	c    *Controller
 	root *html.Node
@@ -74,12 +75,16 @@ func ScrapeTitlePage(c *Controller, src io.Reader) (*tags.Movie, error) {
 		return nil, err
 	}
 	movie := new(tags.Movie)
-	if tag, err := title.Synopsis(); err == nil {
+	if tag, err := title.Synopsis(); err != nil {
+		global.Log.Error(fmt.Errorf("Failed receiving synopsis: %s", err))
+	} else {
 		movie.Synopses = make([]tags.MultiLingual, 1)
 		movie.Synopses[0] = *tag
 	}
 
-	if title, err := title.Title(); err == nil {
+	if title, err := title.Title(); err != nil {
+		global.Log.Error(fmt.Errorf("Failed receiving title: %s", err))
+	} else {
 		movie.Titles = make([]tags.MultiLingual, 1)
 		movie.Titles[0] = *title
 	}
