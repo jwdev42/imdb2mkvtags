@@ -104,7 +104,11 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		}
 		tags = json.Convert()
 	} else {
-		panic("UseJsonLD must be true for now")
+		if t, err := ScrapeTitlePage(r, body); err != nil {
+			return nil, err
+		} else {
+			tags = t
+		}
 	}
 
 	if r.o.UseFullCast {

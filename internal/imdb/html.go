@@ -7,11 +7,84 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jwdev42/imdb2mkvtags/internal/imdb/schema"
+	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"github.com/jwdev42/rottensoup"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"io"
 )
+
+//represents the title pages https://www.imdb.com/title/$titleID/
+type Title struct {
+	c    *Controller
+	root *html.Node
+}
+
+func NewTitle(c *Controller, r io.Reader) (*Title, error) {
+	root, err := html.Parse(r)
+	if err != nil {
+		return nil, err
+	}
+	return &Title{
+		c:    c,
+		root: root,
+	}, nil
+}
+
+func (r *Title) textByTestID(id string) (string, error) {
+	const key = "data-testid"
+	node := rottensoup.FirstElementByAttr(r.root, html.Attribute{Key: key, Val: id})
+	if node == nil {
+		return "", fmt.Errorf("No element found with attribute %s=\"%s\"", key, id)
+	}
+	text := rottensoup.FirstNodeByType(node, html.TextNode)
+	if text == nil {
+		return "", fmt.Errorf("No text node found that is a child of element with attribute %s=\"%s\"", key, id)
+	}
+	return text.Data, nil
+}
+
+func (r *Title) Synopsis() (*tags.MultiLingual, error) {
+	const entity = "synopsis"
+	text, err := r.textByTestID("plot-xl")
+	if err != nil {
+		return nil, fmt.Errorf("Could not fetch %s: %s", entity, err)
+	}
+	return &tags.MultiLingual{
+		Text: text,
+		Lang: "en",
+	}, nil
+}
+
+func (r *Title) Title() (*tags.MultiLingual, error) {
+	const entity = "title"
+	text, err := r.textByTestID("hero-title-block__title")
+	if err != nil {
+		return nil, fmt.Errorf("Could not fetch %s: %s", entity, err)
+	}
+	return &tags.MultiLingual{
+		Text: text,
+		Lang: r.c.o.Languages[0],
+	}, nil
+}
+
+func ScrapeTitlePage(c *Controller, src io.Reader) (*tags.Movie, error) {
+	title, err := NewTitle(c, src)
+	if err != nil {
+		return nil, err
+	}
+	movie := new(tags.Movie)
+	if tag, err := title.Synopsis(); err == nil {
+		movie.Synopses = make([]tags.MultiLingual, 1)
+		movie.Synopses[0] = *tag
+	}
+
+	if title, err := title.Title(); err == nil {
+		movie.Titles = make([]tags.MultiLingual, 1)
+		movie.Titles[0] = *title
+	}
+	return movie, nil
+}
 
 //Scrapes the json-ld data from an imdb page and loads it into a movie schema object.
 func ExtractMovieSchema(src io.Reader) (*schema.Movie, error) {
