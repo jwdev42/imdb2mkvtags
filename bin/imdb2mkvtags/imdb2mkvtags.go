@@ -36,7 +36,7 @@ func main() {
 	}
 	movie, err := c.Scrape()
 	if err != nil {
-		global.Log.Die(fmt.Errorf("Error while extracting movie schema: %s", err))
+		global.Log.Die(fmt.Errorf("Scraping error: %s", err))
 	}
 	var file *os.File
 	if *flags.Out != "" {
