@@ -96,6 +96,9 @@ func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
 	if err := xw.CloseElement(); err != nil {
 		return err
 	}
+	if err := xw.CloseElement(); err != nil {
+		return err
+	}
 
 	for _, actor := range r.Actors {
 		if err := actor.WriteTag(xw); err != nil {
