@@ -181,5 +181,8 @@ func WriteTags(w io.Writer, tagWriter func(*ixml.XmlWriter) error) error {
 	if err := xw.Flush(); err != nil {
 		return err
 	}
+	if _, err := w.Write([]byte{'\n'}); err != nil {
+		return err
+	}
 	return nil
 }
