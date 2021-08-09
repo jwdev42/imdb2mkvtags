@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	"github.com/jwdev42/imdb2mkvtags/internal/imdb/schema"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"github.com/jwdev42/rottensoup"
@@ -14,6 +13,8 @@ import (
 	"golang.org/x/net/html/atom"
 	"io"
 )
+
+const attrTestID = "data-testid"
 
 //represents title pages https://www.imdb.com/title/$titleID/
 type Title struct {
@@ -32,63 +33,65 @@ func NewTitle(c *Controller, r io.Reader) (*Title, error) {
 	}, nil
 }
 
-func (r *Title) textByTestID(id string) (string, error) {
-	const key = "data-testid"
-	node := rottensoup.FirstElementByAttr(r.root, html.Attribute{Key: key, Val: id})
-	if node == nil {
-		return "", fmt.Errorf("No element found with attribute %s=\"%s\"", key, id)
-	}
-	text := rottensoup.FirstNodeByType(node, html.TextNode)
-	if text == nil {
-		return "", fmt.Errorf("No text node found that is a child of element with attribute %s=\"%s\"", key, id)
-	}
-	return text.Data, nil
-}
-
-func (r *Title) Synopsis() (*tags.MultiLingual, error) {
-	const entity = "synopsis"
-	text, err := r.textByTestID("plot-xl")
-	if err != nil {
-		return nil, fmt.Errorf("Could not fetch %s: %s", entity, err)
-	}
-	return &tags.MultiLingual{
-		Text: text,
-		Lang: "en",
-	}, nil
-}
-
-func (r *Title) Title() (*tags.MultiLingual, error) {
-	const entity = "title"
-	text, err := r.textByTestID("hero-title-block__title")
-	if err != nil {
-		return nil, fmt.Errorf("Could not fetch %s: %s", entity, err)
-	}
-	return &tags.MultiLingual{
-		Text: text,
-		Lang: r.c.o.Languages[0],
-	}, nil
-}
-
-func ScrapeTitlePage(c *Controller, src io.Reader) (*tags.Movie, error) {
-	title, err := NewTitle(c, src)
+func (r *Title) Genres() ([]tags.MultiLingual, error) {
+	const errNoGenreData = "No genre data available"
+	node, err := r.elementByTestID("genres")
 	if err != nil {
 		return nil, err
 	}
-	movie := new(tags.Movie)
-	if tag, err := title.Synopsis(); err != nil {
-		global.Log.Error(fmt.Errorf("Failed receiving synopsis: %s", err))
-	} else {
-		movie.Synopses = make([]tags.MultiLingual, 1)
-		movie.Synopses[0] = *tag
+	spans := rottensoup.ElementsByTagAndAttr(node, atom.Span, html.Attribute{Key: "class", Val: "ipc-chip__text"})
+	if len(spans) < 1 {
+		return nil, errors.New(errNoGenreData)
 	}
+	genres := make([]tags.MultiLingual, 0, len(spans))
+	for _, span := range spans {
+		if text := rottensoup.FirstNodeByType(span, html.TextNode); text != nil {
+			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: DefaultLanguage})
+		}
+	}
+	if len(genres) < 1 {
+		return nil, errors.New(errNoGenreData)
+	}
+	return genres, nil
+}
 
-	if title, err := title.Title(); err != nil {
-		global.Log.Error(fmt.Errorf("Failed receiving title: %s", err))
-	} else {
-		movie.Titles = make([]tags.MultiLingual, 1)
-		movie.Titles[0] = *title
+func (r *Title) Synopsis() (*tags.MultiLingual, error) {
+	return r.testID2MultiLingual("plot-xl", DefaultLanguage)
+}
+
+func (r *Title) Title() (*tags.MultiLingual, error) {
+	return r.testID2MultiLingual("hero-title-block__title", r.c.o.Languages[0])
+}
+
+func (r *Title) testID2MultiLingual(testID, lang string) (*tags.MultiLingual, error) {
+	text, err := r.textByTestID(testID)
+	if err != nil {
+		return nil, err
 	}
-	return movie, nil
+	return &tags.MultiLingual{
+		Text: text,
+		Lang: lang,
+	}, nil
+}
+
+func (r *Title) elementByTestID(id string) (*html.Node, error) {
+	node := rottensoup.FirstElementByAttr(r.root, html.Attribute{Key: attrTestID, Val: id})
+	if node == nil {
+		return nil, fmt.Errorf("No element found with attribute %s=\"%s\"", attrTestID, id)
+	}
+	return node, nil
+}
+
+func (r *Title) textByTestID(id string) (string, error) {
+	node, err := r.elementByTestID(id)
+	if err != nil {
+		return "", err
+	}
+	text := rottensoup.FirstNodeByType(node, html.TextNode)
+	if text == nil {
+		return "", fmt.Errorf("No text node found that is a child of element with attribute %s=\"%s\"", attrTestID, id)
+	}
+	return text.Data, nil
 }
 
 //Scrapes the json-ld data from an imdb page and loads it into a movie schema object.

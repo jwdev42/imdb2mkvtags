@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+const DefaultLanguage = "en-US"
+
 type options struct {
 	UseJsonLD   bool
 	UseFullCast bool
@@ -34,7 +36,7 @@ func NewController(rawurl string) (*Controller, error) {
 		o: &options{
 			UseJsonLD:   true,
 			UseFullCast: false,
-			Languages:   []string{"en-US"},
+			Languages:   []string{DefaultLanguage},
 		},
 	}, nil
 }
@@ -106,7 +108,7 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		}
 		tags = json.Convert()
 	} else {
-		if t, err := ScrapeTitlePage(r, body); err != nil {
+		if t, err := r.scrapeTitlePage(body); err != nil {
 			return nil, err
 		} else {
 			tags = t
@@ -176,4 +178,33 @@ func (r *Controller) scrapeFullCredits(tags *tags.Movie) error {
 		global.Log.Notice("Fullcredits: No writers found")
 	}
 	return nil
+}
+
+func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
+	title, err := NewTitle(r, src)
+	if err != nil {
+		return nil, err
+	}
+	movie := new(tags.Movie)
+
+	if genres, err := title.Genres(); err != nil {
+		global.Log.Error(fmt.Errorf("No genres found: %s", err))
+	} else {
+		movie.Genres = genres
+	}
+
+	if tag, err := title.Synopsis(); err != nil {
+		global.Log.Error(fmt.Errorf("No synopsis found: %s", err))
+	} else {
+		movie.Synopses = make([]tags.MultiLingual, 1)
+		movie.Synopses[0] = *tag
+	}
+
+	if title, err := title.Title(); err != nil {
+		global.Log.Error(fmt.Errorf("No movie title found: %s", err))
+	} else {
+		movie.Titles = make([]tags.MultiLingual, 1)
+		movie.Titles[0] = *title
+	}
+	return movie, nil
 }
