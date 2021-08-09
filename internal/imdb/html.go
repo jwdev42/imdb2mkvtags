@@ -55,6 +55,18 @@ func (r *Title) Genres() ([]tags.MultiLingual, error) {
 	return genres, nil
 }
 
+func (r *Title) ReleaseDate() (tags.UniLingual, error) {
+	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
+	if e == nil {
+		return "", errors.New("The html element that contains the release date was not found")
+	}
+	text := rottensoup.FirstNodeByType(e[0], html.TextNode)
+	if text == nil {
+		return "", errors.New("No text node found")
+	}
+	return tags.UniLingual(text.Data), nil
+}
+
 func (r *Title) Synopsis() (*tags.MultiLingual, error) {
 	return r.testID2MultiLingual("plot-xl", DefaultLanguage)
 }

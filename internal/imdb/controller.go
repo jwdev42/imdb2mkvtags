@@ -188,20 +188,26 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 	movie := new(tags.Movie)
 
 	if genres, err := title.Genres(); err != nil {
-		global.Log.Error(fmt.Errorf("No genres found: %s", err))
+		global.Log.Error(fmt.Errorf("Title page: No genres found: %s", err))
 	} else {
 		movie.Genres = genres
 	}
 
+	if release, err := title.ReleaseDate(); err != nil {
+		global.Log.Error(fmt.Errorf("Title page: No release date found: %s", err))
+	} else {
+		movie.ReleaseDate = release
+	}
+
 	if tag, err := title.Synopsis(); err != nil {
-		global.Log.Error(fmt.Errorf("No synopsis found: %s", err))
+		global.Log.Error(fmt.Errorf("Title page: No synopsis found: %s", err))
 	} else {
 		movie.Synopses = make([]tags.MultiLingual, 1)
 		movie.Synopses[0] = *tag
 	}
 
 	if title, err := title.Title(); err != nil {
-		global.Log.Error(fmt.Errorf("No movie title found: %s", err))
+		global.Log.Error(fmt.Errorf("Title page: No movie title found: %s", err))
 	} else {
 		movie.Titles = make([]tags.MultiLingual, 1)
 		movie.Titles[0] = *title
