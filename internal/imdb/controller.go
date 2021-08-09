@@ -185,39 +185,35 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	const errNotFound = "Title page: No %s found"
+
 	movie := new(tags.Movie)
 
-	if rating, err := title.ContentRating(); err != nil {
-		global.Log.Error(fmt.Errorf("Title page: No content rating data found: %s", err))
-	} else {
-		movie.ContentRating = make([]tags.MultiLingual, 1)
-		movie.ContentRating[0] = *rating
+	setML := func(name, dataDesc string, f func() (*tags.MultiLingual, error)) {
+		if v, err := f(); err != nil {
+			global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, dataDesc), err))
+		} else {
+			movie.SetField(name, []tags.MultiLingual{*v})
+		}
 	}
 
+	setML("ContentRating", "content rating data", title.ContentRating)
+
 	if genres, err := title.Genres(); err != nil {
-		global.Log.Error(fmt.Errorf("Title page: No genres found: %s", err))
+		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "genre information"), err))
 	} else {
 		movie.Genres = genres
 	}
 
 	if release, err := title.ReleaseDate(); err != nil {
-		global.Log.Error(fmt.Errorf("Title page: No release date found: %s", err))
+		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "release date"), err))
 	} else {
 		movie.ReleaseDate = release
 	}
 
-	if tag, err := title.Synopsis(); err != nil {
-		global.Log.Error(fmt.Errorf("Title page: No synopsis found: %s", err))
-	} else {
-		movie.Synopses = make([]tags.MultiLingual, 1)
-		movie.Synopses[0] = *tag
-	}
+	setML("Synopses", "synopsis", title.Synopsis)
+	setML("Titles", "movie title", title.Title)
 
-	if title, err := title.Title(); err != nil {
-		global.Log.Error(fmt.Errorf("Title page: No movie title found: %s", err))
-	} else {
-		movie.Titles = make([]tags.MultiLingual, 1)
-		movie.Titles[0] = *title
-	}
 	return movie, nil
 }

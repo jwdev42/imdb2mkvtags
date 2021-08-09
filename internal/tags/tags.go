@@ -4,8 +4,10 @@ package tags
 
 import (
 	"encoding/xml"
+	"fmt"
 	ixml "github.com/jwdev42/imdb2mkvtags/internal/xml"
 	"io"
+	"reflect"
 	"strings"
 )
 
@@ -64,6 +66,15 @@ type Movie struct {
 	Synopses      []MultiLingual
 	Titles        []MultiLingual
 	Writers       []UniLingual
+}
+
+func (r *Movie) SetField(name string, data interface{}) {
+	val := reflect.Indirect(reflect.ValueOf(r))
+	fieldVal := val.FieldByName(name)
+	if fieldVal == (reflect.Value{}) {
+		panic(fmt.Errorf(`Field "%s" not a member of struct Movie`, name))
+	}
+	fieldVal.Set(reflect.ValueOf(data))
 }
 
 func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
