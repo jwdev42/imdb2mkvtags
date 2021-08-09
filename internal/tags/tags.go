@@ -4,7 +4,6 @@ package tags
 
 import (
 	"encoding/xml"
-	"fmt"
 	ixml "github.com/jwdev42/imdb2mkvtags/internal/xml"
 	"io"
 	"strings"
@@ -27,22 +26,6 @@ func (r *Actor) WriteTag(xw *ixml.XmlWriter) error {
 	actor = append(actor, [2]string{"Name", "ACTOR"})
 	actor = append(actor, [2]string{"String", r.Name})
 	return ixml.WriteTagWithSubtags(xw, "Simple", actor, fc)
-}
-
-type ContentRating struct {
-	Agency string
-	Rating string
-}
-
-func (r *ContentRating) WriteTag(xw *ixml.XmlWriter) error {
-	subtags := make([][2]string, 0, 2)
-	subtags = append(subtags, [2]string{"Name", "LAW_RATING"})
-	if len(r.Agency) > 0 {
-		subtags = append(subtags, [2]string{"String", fmt.Sprintf("%s: %s", r.Agency, r.Rating)})
-	} else {
-		subtags = append(subtags, [2]string{"String", r.Rating})
-	}
-	return ixml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
 }
 
 type UniLingual string
@@ -71,7 +54,7 @@ func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
 
 type Movie struct {
 	Actors        []Actor
-	ContentRating []ContentRating
+	ContentRating []MultiLingual
 	Directors     []UniLingual
 	Genres        []MultiLingual
 	Imdb          UniLingual
@@ -107,7 +90,7 @@ func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
 	}
 
 	for _, cr := range r.ContentRating {
-		if err := cr.WriteTag(xw); err != nil {
+		if err := cr.WriteTag(xw, "LAW_RATING"); err != nil {
 			return err
 		}
 	}

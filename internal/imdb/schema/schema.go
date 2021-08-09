@@ -58,8 +58,8 @@ func (r *Movie) Convert() *tags.Movie {
 	}
 
 	if len(r.ContentRating) > 0 {
-		movie.ContentRating = make([]tags.ContentRating, 1)
-		movie.ContentRating[0].Rating = html.UnescapeString(r.ContentRating)
+		movie.ContentRating = make([]tags.MultiLingual, 1)
+		movie.ContentRating[0].Text = html.UnescapeString(r.ContentRating)
 	}
 
 	if len(r.DatePublished) > 0 {

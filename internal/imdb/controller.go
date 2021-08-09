@@ -190,7 +190,7 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 	if rating, err := title.ContentRating(); err != nil {
 		global.Log.Error(fmt.Errorf("Title page: No content rating data found: %s", err))
 	} else {
-		movie.ContentRating = make([]tags.ContentRating, 1)
+		movie.ContentRating = make([]tags.MultiLingual, 1)
 		movie.ContentRating[0] = *rating
 	}
 

@@ -33,7 +33,7 @@ func NewTitle(c *Controller, r io.Reader) (*Title, error) {
 	}, nil
 }
 
-func (r *Title) ContentRating() (*tags.ContentRating, error) {
+func (r *Title) ContentRating() (*tags.MultiLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil || len(e) < 2 {
 		return nil, errors.New("The html element that contains the release date was not found")
@@ -42,7 +42,7 @@ func (r *Title) ContentRating() (*tags.ContentRating, error) {
 	if text == nil {
 		return nil, errors.New("No text node found")
 	}
-	return &tags.ContentRating{Rating: text.Data}, nil
+	return &tags.MultiLingual{Text: text.Data, Lang: r.c.o.Languages[0]}, nil
 }
 
 func (r *Title) Genres() ([]tags.MultiLingual, error) {
