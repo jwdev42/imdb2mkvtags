@@ -5,18 +5,31 @@ package tags
 import (
 	"encoding/xml"
 	"fmt"
+	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	ixml "github.com/jwdev42/imdb2mkvtags/internal/xml"
 	"io"
 	"reflect"
-	"strings"
 )
+
+type EmptyTag string
+
+func (r EmptyTag) Error() string {
+	return string(r)
+}
+
+func NewEmptyTag(tag string) EmptyTag {
+	return EmptyTag(fmt.Sprintf("Tag is empty or incomplete: %s", tag))
+}
 
 type Actor struct {
 	Name      string
 	Character string
 }
 
-func (r *Actor) WriteTag(xw *ixml.XmlWriter) error {
+func (r *Actor) WriteTag(xw *ixml.XmlWriter, name string) error {
+	if len(r.Name) < 1 {
+		return NewEmptyTag(name)
+	}
 	var fc func(*ixml.XmlWriter) error
 	if r.Character != "" {
 		character := make([][2]string, 0, 2)
@@ -25,7 +38,7 @@ func (r *Actor) WriteTag(xw *ixml.XmlWriter) error {
 		fc = ixml.GenWriteTagWithSubtags("Simple", character, nil)
 	}
 	actor := make([][2]string, 0, 2)
-	actor = append(actor, [2]string{"Name", "ACTOR"})
+	actor = append(actor, [2]string{"Name", name})
 	actor = append(actor, [2]string{"String", r.Name})
 	return ixml.WriteTagWithSubtags(xw, "Simple", actor, fc)
 }
@@ -33,6 +46,9 @@ func (r *Actor) WriteTag(xw *ixml.XmlWriter) error {
 type UniLingual string
 
 func (r UniLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
+	if len(r) < 1 {
+		return NewEmptyTag(name)
+	}
 	subtags := make([][2]string, 0, 2)
 	subtags = append(subtags, [2]string{"Name", name})
 	subtags = append(subtags, [2]string{"String", string(r)})
@@ -45,6 +61,9 @@ type MultiLingual struct {
 }
 
 func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
+	if len(r.Text) < 1 {
+		return NewEmptyTag(name)
+	}
 	subtags := make([][2]string, 0, 3)
 	subtags = append(subtags, [2]string{"Name", name})
 	subtags = append(subtags, [2]string{"String", r.Text})
@@ -55,17 +74,17 @@ func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
 }
 
 type Movie struct {
-	Actors        []Actor
-	ContentRating []MultiLingual
-	Directors     []UniLingual
-	Genres        []MultiLingual
-	Imdb          UniLingual
-	Keywords      []UniLingual
-	Producers     []UniLingual
-	ReleaseDate   UniLingual
-	Synopses      []MultiLingual
-	Titles        []MultiLingual
-	Writers       []UniLingual
+	Actors        []Actor        `mkv:"ACTOR"`
+	ContentRating []MultiLingual `mkv:"LAW_RATING"`
+	Directors     []UniLingual   `mkv:"DIRECTOR"`
+	Genres        []MultiLingual `mkv:"GENRE"`
+	Imdb          UniLingual     `mkv:"IMDB"`
+	Keywords      UniLingual     `mkv:"KEYWORDS"`
+	Producers     []UniLingual   `mkv:"PRODUCER"`
+	ReleaseDate   UniLingual     `mkv:"DATE_RELEASED"`
+	Synopses      []MultiLingual `mkv:"SYNOPSIS"`
+	Titles        []MultiLingual `mkv:"TITLE"`
+	Writers       []UniLingual   `mkv:"WRITTEN_BY"`
 }
 
 func (r *Movie) SetField(name string, data interface{}) {
@@ -77,99 +96,127 @@ func (r *Movie) SetField(name string, data interface{}) {
 	fieldVal.Set(reflect.ValueOf(data))
 }
 
-func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
+func (r *Movie) writeFields(xw *ixml.XmlWriter) error {
 
-	if err := xw.EncodeTokens(
-		ixml.NewStartElementSimple("Tag"), ixml.NewStartElementSimple("Targets"),
-		ixml.NewStartElementSimple("TargetTypeValue")); err != nil {
-		return err
-	}
-	if err := xw.WriteText([]byte("50")); err != nil {
-		return err
-	}
-	if err := xw.CloseElement(); err != nil {
-		return err
-	}
-	if err := xw.CloseElement(); err != nil {
-		return err
+	hasMethodWriteTag := func(v reflect.Value) bool {
+		_, ok := v.Type().MethodByName("WriteTag")
+		return ok
 	}
 
-	for _, actor := range r.Actors {
-		if err := actor.WriteTag(xw); err != nil {
-			return err
+	hasMkvTag := func(desc reflect.StructField) bool {
+		if desc.Tag.Get("mkv") != "" {
+			return true
 		}
+		return false
 	}
 
-	for _, cr := range r.ContentRating {
-		if err := cr.WriteTag(xw, "LAW_RATING"); err != nil {
-			return err
+	fieldWriter := func(v reflect.Value) reflect.Value {
+		if hasMethodWriteTag(v) {
+			return v
+		} else if hasMethodWriteTag(v.Addr()) {
+			return v.Addr()
 		}
+		return reflect.Value{}
 	}
 
-	for _, director := range r.Directors {
-		if err := director.WriteTag(xw, "DIRECTOR"); err != nil {
-			return err
+	writeIfEligible := func(v reflect.Value, tagName string) error {
+		fw := fieldWriter(v)
+		if fw == (reflect.Value{}) {
+			panic("Object does not have a Method \"WriteTag\"")
 		}
-	}
-
-	for _, genre := range r.Genres {
-		if err := genre.WriteTag(xw, "GENRE"); err != nil {
-			return err
-		}
-	}
-
-	if len(r.Imdb) > 0 {
-		if err := r.Imdb.WriteTag(xw, "IMDB"); err != nil {
-			return err
-		}
-	}
-
-	if len(r.Keywords) > 0 {
-		buf := new(strings.Builder)
-		for i := 0; i < len(r.Keywords); i++ {
-			buf.WriteString(string(r.Keywords[i]))
-			if i < len(r.Keywords)-1 {
-				buf.WriteByte(',')
+		if err := r.writeField(xw, fw, tagName); err != nil {
+			if _, ok := err.(EmptyTag); ok {
+				global.Log.Debug(err)
+			} else {
+				return err
 			}
 		}
-		if err := UniLingual(buf.String()).WriteTag(xw, "KEYWORDS"); err != nil {
+		return nil
+	}
+
+	iterate := func(slice reflect.Value, tagName string) error {
+		for i := 0; i < slice.Len(); i++ {
+			e := slice.Index(i)
+			if err := writeIfEligible(e, tagName); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	inspectField := func(fieldVal reflect.Value, fieldDesc reflect.StructField) error {
+		mkvTag := fieldDesc.Tag.Get("mkv")
+		if mkvTag == "" {
+			panic("function requires an non-empty mkv struct tag")
+		}
+		if fieldVal.Kind() == reflect.Slice {
+			return iterate(fieldVal, mkvTag)
+		}
+		return writeIfEligible(fieldVal, mkvTag)
+	}
+
+	structVal := reflect.Indirect(reflect.ValueOf(r))
+	for i := 0; i < structVal.NumField(); i++ {
+		fieldDesc := structVal.Type().Field(i)
+		if !hasMkvTag(fieldDesc) {
+			continue
+		}
+		if err := inspectField(structVal.Field(i), fieldDesc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Movie) writeField(xw *ixml.XmlWriter, field reflect.Value, tagName string) error {
+	tagWriter := field.MethodByName("WriteTag")
+	if tagWriter == (reflect.Value{}) {
+		panic("field has no method \"WriteTag\"")
+	}
+	var ret []reflect.Value
+	if len(tagName) < 1 {
+		ret = tagWriter.Call([]reflect.Value{reflect.ValueOf(xw)})
+	} else {
+		ret = tagWriter.Call([]reflect.Value{reflect.ValueOf(xw), reflect.ValueOf(tagName)})
+	}
+	if ret == nil || len(ret) < 1 {
+		panic("ret cannot be nil and must contain one return value")
+	}
+	if !ret[0].IsNil() {
+		return ret[0].Interface().(error)
+	}
+
+	return nil
+}
+
+func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
+
+	//Write "Header" with TargetTypeValue=50
+	{
+		if err := xw.EncodeTokens(
+			ixml.NewStartElementSimple("Tag"), ixml.NewStartElementSimple("Targets"),
+			ixml.NewStartElementSimple("TargetTypeValue")); err != nil {
+			return err
+		}
+		if err := xw.WriteText([]byte("50")); err != nil {
+			return err
+		}
+		if err := xw.CloseElement(); err != nil {
+			return err
+		}
+		if err := xw.CloseElement(); err != nil {
 			return err
 		}
 	}
 
-	for _, producer := range r.Producers {
-		if err := producer.WriteTag(xw, "PRODUCER"); err != nil {
-			return err
-		}
-	}
-
-	if len(r.ReleaseDate) > 0 {
-		if err := r.ReleaseDate.WriteTag(xw, "DATE_RELEASED"); err != nil {
-			return err
-		}
-	}
-
-	for _, synopsis := range r.Synopses {
-		if err := synopsis.WriteTag(xw, "SYNOPSIS"); err != nil {
-			return err
-		}
-	}
-
-	for _, title := range r.Titles {
-		if err := title.WriteTag(xw, "TITLE"); err != nil {
-			return err
-		}
-	}
-
-	for _, writer := range r.Writers {
-		if err := writer.WriteTag(xw, "WRITTEN_BY"); err != nil {
-			return err
-		}
+	if err := r.writeFields(xw); err != nil {
+		return err
 	}
 
 	if err := xw.CloseElement(); err != nil {
 		return err
 	}
+
 	return nil
 }
 

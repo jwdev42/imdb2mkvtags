@@ -5,7 +5,6 @@ package schema
 import (
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"html"
-	"strings"
 )
 
 type Thing struct {
@@ -91,11 +90,7 @@ func (r *Movie) Convert() *tags.Movie {
 	}
 
 	if len(r.Keywords) > 0 {
-		kw := strings.Split(r.Keywords, ",")
-		movie.Keywords = make([]tags.UniLingual, len(kw))
-		for i, v := range kw {
-			movie.Keywords[i] = tags.UniLingual(html.UnescapeString(strings.TrimSpace(v)))
-		}
+		movie.Keywords = tags.UniLingual(r.Keywords)
 	}
 
 	if len(r.Name) > 0 {
