@@ -103,6 +103,7 @@ func (r *Movie) writeFields(xw *ixml.XmlWriter) error {
 		return ok
 	}
 
+	//Returns true if the StructField has a tag with key "mkv" and a non-empty value.
 	hasMkvTag := func(desc reflect.StructField) bool {
 		if desc.Tag.Get("mkv") != "" {
 			return true
@@ -110,34 +111,38 @@ func (r *Movie) writeFields(xw *ixml.XmlWriter) error {
 		return false
 	}
 
+	//Returns the version of v that has a method WriteTag, it first tries v, then a pointer to v.
+	//If v is already a pointer and has no method WriteTag, a zero-value of reflect.Value is returned.
+	//If neither v nor its pointer has a method WriteTag, a zero-value of reflect.Value is returned.
 	fieldWriter := func(v reflect.Value) reflect.Value {
 		if hasMethodWriteTag(v) {
 			return v
+		} else if v.Kind() == reflect.Ptr {
+			return reflect.Value{}
 		} else if hasMethodWriteTag(v.Addr()) {
 			return v.Addr()
 		}
 		return reflect.Value{}
 	}
 
-	writeIfEligible := func(v reflect.Value, tagName string) error {
+	write := func(v reflect.Value, tagName string) error {
 		fw := fieldWriter(v)
 		if fw == (reflect.Value{}) {
 			panic("Object does not have a Method \"WriteTag\"")
 		}
 		if err := r.writeField(xw, fw, tagName); err != nil {
-			if _, ok := err.(EmptyTag); ok {
-				global.Log.Debug(err)
-			} else {
-				return err
-			}
+			return err
 		}
 		return nil
 	}
 
 	iterate := func(slice reflect.Value, tagName string) error {
+		if slice.Len() < 1 {
+			return NewEmptyTag(tagName)
+		}
 		for i := 0; i < slice.Len(); i++ {
 			e := slice.Index(i)
-			if err := writeIfEligible(e, tagName); err != nil {
+			if err := write(e, tagName); err != nil {
 				return err
 			}
 		}
@@ -152,7 +157,7 @@ func (r *Movie) writeFields(xw *ixml.XmlWriter) error {
 		if fieldVal.Kind() == reflect.Slice {
 			return iterate(fieldVal, mkvTag)
 		}
-		return writeIfEligible(fieldVal, mkvTag)
+		return write(fieldVal, mkvTag)
 	}
 
 	structVal := reflect.Indirect(reflect.ValueOf(r))
@@ -162,7 +167,12 @@ func (r *Movie) writeFields(xw *ixml.XmlWriter) error {
 			continue
 		}
 		if err := inspectField(structVal.Field(i), fieldDesc); err != nil {
-			return err
+			switch t := err.(type) {
+			case EmptyTag:
+				global.Log.Debug(t)
+			default:
+				return t
+			}
 		}
 	}
 	return nil
