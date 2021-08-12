@@ -190,6 +190,8 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 
 	movie := new(tags.Movie)
 
+	movie.Imdb = tags.UniLingual(r.imdbID())
+
 	setML := func(name, dataDesc string, f func() (*tags.MultiLingual, error)) {
 		if v, err := f(); err != nil {
 			global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, dataDesc), err))
@@ -234,4 +236,12 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 	}
 
 	return movie, nil
+}
+
+func (r *Controller) imdbID() string {
+	path := strings.Split(r.u.Path, "/")
+	if len(path) < 3 {
+		return ""
+	}
+	return path[2]
 }
