@@ -18,8 +18,9 @@ const attrTestID = "data-testid"
 
 //represents title pages https://www.imdb.com/title/$titleID/
 type Title struct {
-	c    *Controller
-	root *html.Node
+	c       *Controller
+	root    *html.Node
+	credits creditsList
 }
 
 func NewTitle(c *Controller, r io.Reader) (*Title, error) {
@@ -31,6 +32,32 @@ func NewTitle(c *Controller, r io.Reader) (*Title, error) {
 		c:    c,
 		root: root,
 	}, nil
+}
+
+func (r *Title) parseCreditsList() error {
+	list, err := parseCreditsList(r.root)
+	if err != nil {
+		return err
+	}
+	r.credits = list
+	return nil
+}
+
+func (r *Title) Actors() ([]tags.Actor, error) {
+	if r.credits == nil {
+		if err := r.parseCreditsList(); err != nil {
+			return nil, err
+		}
+	}
+	names := r.credits["actors"]
+	if len(names) < 1 {
+		return nil, errors.New("No actors found")
+	}
+	actors := make([]tags.Actor, len(names))
+	for i, name := range names {
+		actors[i].Name = name
+	}
+	return actors, nil
 }
 
 func (r *Title) ContentRating() (*tags.MultiLingual, error) {
@@ -67,6 +94,23 @@ func (r *Title) Genres() ([]tags.MultiLingual, error) {
 	return genres, nil
 }
 
+func (r *Title) Directors() ([]tags.UniLingual, error) {
+	if r.credits == nil {
+		if err := r.parseCreditsList(); err != nil {
+			return nil, err
+		}
+	}
+	names := r.credits["directors"]
+	if len(names) < 1 {
+		return nil, errors.New("No data available")
+	}
+	directors := make([]tags.UniLingual, len(names))
+	for i, name := range names {
+		directors[i] = tags.UniLingual(name)
+	}
+	return directors, nil
+}
+
 func (r *Title) ReleaseDate() (tags.UniLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil {
@@ -85,6 +129,23 @@ func (r *Title) Synopsis() (*tags.MultiLingual, error) {
 
 func (r *Title) Title() (*tags.MultiLingual, error) {
 	return r.testID2MultiLingual("hero-title-block__title", r.c.o.Languages[0])
+}
+
+func (r *Title) Writers() ([]tags.UniLingual, error) {
+	if r.credits == nil {
+		if err := r.parseCreditsList(); err != nil {
+			return nil, err
+		}
+	}
+	names := r.credits["writers"]
+	if len(names) < 1 {
+		return nil, errors.New("No data available")
+	}
+	writers := make([]tags.UniLingual, len(names))
+	for i, name := range names {
+		writers[i] = tags.UniLingual(name)
+	}
+	return writers, nil
 }
 
 func (r *Title) testID2MultiLingual(testID, lang string) (*tags.MultiLingual, error) {

@@ -198,7 +198,19 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 		}
 	}
 
+	if actors, err := title.Actors(); err != nil {
+		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "actors"), err))
+	} else {
+		movie.Actors = actors
+	}
+
 	setML("ContentRating", "content rating data", title.ContentRating)
+
+	if directors, err := title.Directors(); err != nil {
+		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "directors"), err))
+	} else {
+		movie.Directors = directors
+	}
 
 	if genres, err := title.Genres(); err != nil {
 		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "genre information"), err))
@@ -214,6 +226,12 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 
 	setML("Synopses", "synopsis", title.Synopsis)
 	setML("Titles", "movie title", title.Title)
+
+	if writers, err := title.Writers(); err != nil {
+		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "writers"), err))
+	} else {
+		movie.Writers = writers
+	}
 
 	return movie, nil
 }
