@@ -2,6 +2,7 @@ package imdb
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/jwdev42/imdb2mkvtags/internal/cmdline"
 	"github.com/jwdev42/imdb2mkvtags/internal/global"
@@ -22,8 +23,9 @@ type options struct {
 }
 
 type Controller struct {
-	u *url.URL
-	o *options
+	u       *url.URL
+	o       *options
+	titleID string
 }
 
 func NewController(rawurl string) (*Controller, error) {
@@ -31,6 +33,17 @@ func NewController(rawurl string) (*Controller, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	//validate url
+	path := strings.Split(u.Path, "/")
+	if len(path) < 3 || path[1] != "title" || !IsTitleID(path[2]) {
+		return nil, errors.New("Unsupported or invalid URL")
+	}
+
+	//rebuild url path
+	u.Path = fmt.Sprintf("/title/%s/", path[2])
+	global.Log.Debug(fmt.Sprintf("IMDB controller: New controller with url \"%s\"", u.String()))
+
 	return &Controller{
 		u: u,
 		o: &options{
@@ -38,6 +51,7 @@ func NewController(rawurl string) (*Controller, error) {
 			UseFullCast: false,
 			Languages:   []string{DefaultLanguage},
 		},
+		titleID: path[2],
 	}, nil
 }
 
@@ -190,7 +204,7 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 
 	movie := new(tags.Movie)
 
-	movie.Imdb = tags.UniLingual(r.imdbID())
+	movie.Imdb = tags.UniLingual(r.titleID)
 
 	setML := func(name, dataDesc string, f func() (*tags.MultiLingual, error)) {
 		if v, err := f(); err != nil {
@@ -236,12 +250,4 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 	}
 
 	return movie, nil
-}
-
-func (r *Controller) imdbID() string {
-	path := strings.Split(r.u.Path, "/")
-	if len(path) < 3 {
-		return ""
-	}
-	return path[2]
 }
