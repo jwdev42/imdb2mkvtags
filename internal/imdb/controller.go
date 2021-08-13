@@ -47,7 +47,7 @@ func NewController(rawurl string) (*Controller, error) {
 	return &Controller{
 		u: u,
 		o: &options{
-			UseJsonLD:   true,
+			UseJsonLD:   false,
 			UseFullCast: false,
 			Languages:   []string{DefaultLanguage},
 		},
