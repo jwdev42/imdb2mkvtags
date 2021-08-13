@@ -4,6 +4,7 @@ package http
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
@@ -26,6 +27,10 @@ func Body(client *http.Client, req *http.Request, dest io.Writer) error {
 	if _, err := io.Copy(dest, resp.Body); err != nil {
 		return err
 	}
+	if resp.StatusCode >= 300 {
+		return errors.New(fmt.Sprintf("HTTP response: %s", resp.Status))
+	}
+
 	return nil
 }
 
