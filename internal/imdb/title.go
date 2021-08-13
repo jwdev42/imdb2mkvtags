@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	"github.com/jwdev42/imdb2mkvtags/internal/imdb/schema"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"github.com/jwdev42/rottensoup"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"io"
+	"regexp"
+	"strings"
 )
 
 const attrTestID = "data-testid"
@@ -109,6 +112,33 @@ func (r *Title) Directors() ([]tags.UniLingual, error) {
 		directors[i] = tags.UniLingual(name)
 	}
 	return directors, nil
+}
+
+func (r *Title) Keywords() (tags.UniLingual, error) {
+	exclude := regexp.MustCompile("^[0-9]+ more$")
+	start, err := r.elementByTestID("storyline-plot-keywords")
+	if err != nil {
+		return "", errors.New("The html element that contains the keywords was not found")
+	}
+	keywordNodes := rottensoup.ElementsByClassName(start, "ipc-chip__text")
+	if keywordNodes == nil {
+		return "", errors.New("No keyword nodes found inside keywords container")
+	}
+	keywords := make([]string, 0, len(keywordNodes))
+	for i, node := range keywordNodes {
+		textNode := rottensoup.FirstNodeByType(node, html.TextNode)
+		if textNode == nil || len(textNode.Data) < 1 {
+			global.Log.Error(fmt.Errorf("Empty keyword node at pos %d", i))
+			continue
+		}
+		if !exclude.MatchString(textNode.Data) {
+			keywords = append(keywords, textNode.Data)
+		}
+	}
+	if len(keywords) < 1 {
+		return "", errors.New("No keywords found")
+	}
+	return tags.UniLingual(strings.Join(keywords, ",")), nil
 }
 
 func (r *Title) ReleaseDate() (tags.UniLingual, error) {

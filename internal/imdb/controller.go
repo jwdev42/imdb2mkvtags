@@ -234,6 +234,12 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 		movie.Genres = genres
 	}
 
+	if keywords, err := title.Keywords(); err != nil {
+		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "keywords"), err))
+	} else {
+		movie.Keywords = keywords
+	}
+
 	if release, err := title.ReleaseDate(); err != nil {
 		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "release date"), err))
 	} else {
