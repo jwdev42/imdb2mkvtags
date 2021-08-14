@@ -100,18 +100,8 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 
 func (r *Controller) Scrape() (*tags.Movie, error) {
 	var tags *tags.Movie
-	req, err := ihttp.NewBareReq("GET", r.u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(r.o.Languages) > 0 {
-		if err := ihttp.SetReqAccLang(req, r.o.Languages...); err != nil {
-			return nil, err
-		}
-	}
 	body := new(bytes.Buffer)
-	if err := ihttp.Body(nil, req, body); err != nil {
+	if err := ihttp.GetBody(nil, r.u.String(), body, r.o.Languages...); err != nil {
 		return nil, err
 	}
 
@@ -138,23 +128,14 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 	return tags, nil
 }
 
-func (r *Controller) scrapeFullCredits(tags *tags.Movie) error {
+func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 	fetchFullCredits := func(u string) (io.Reader, error) {
 		u, err := TitleUrl2CreditsUrl(r.u.String())
 		if err != nil {
 			return nil, err
 		}
-		req, err := ihttp.NewBareReq("GET", u, nil)
-		if err != nil {
-			return nil, err
-		}
-		if len(r.o.Languages) > 0 {
-			if err := ihttp.SetReqAccLang(req, r.o.Languages...); err != nil {
-				return nil, err
-			}
-		}
 		body := new(bytes.Buffer)
-		if err := ihttp.Body(nil, req, body); err != nil {
+		if err := ihttp.GetBody(nil, u, body, r.o.Languages...); err != nil {
 			return nil, err
 		}
 		return body, nil
@@ -170,27 +151,10 @@ func (r *Controller) scrapeFullCredits(tags *tags.Movie) error {
 		return fmt.Errorf("Fullcredits: Could not parse document: %s", err)
 	}
 
-	if actors, err := credits.Cast(); err != nil {
-		global.Log.Error(fmt.Errorf("Fullcredits: Could not process cast table: %s", err))
-	} else {
-		tags.Actors = actors
-	}
-
-	if directors := credits.NamesByID("director"); directors != nil {
-		tags.Directors = directors
-	} else {
-		global.Log.Notice("Fullcredits: No directors found")
-	}
-	if producers := credits.NamesByID("producer"); producers != nil {
-		tags.Producers = producers
-	} else {
-		global.Log.Notice("Fullcredits: No producers found")
-	}
-	if writers := credits.NamesByID("writer"); writers != nil {
-		tags.Writers = writers
-	} else {
-		global.Log.Notice("Fullcredits: No writers found")
-	}
+	movie.SetFieldCallback("Actors", credits.Actors)
+	movie.SetFieldCallback("Directors", credits.NamesByIDCallback("director"))
+	movie.SetFieldCallback("Producers", credits.NamesByIDCallback("producer"))
+	movie.SetFieldCallback("Writers", credits.NamesByIDCallback("writer"))
 	return nil
 }
 
@@ -200,60 +164,18 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 		return nil, err
 	}
 
-	const errNotFound = "Title page: No %s found"
-
 	movie := new(tags.Movie)
 
 	movie.Imdb = tags.UniLingual(r.titleID)
-
-	setML := func(name, dataDesc string, f func() (*tags.MultiLingual, error)) {
-		if v, err := f(); err != nil {
-			global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, dataDesc), err))
-		} else {
-			movie.SetField(name, []tags.MultiLingual{*v})
-		}
-	}
-
-	if actors, err := title.Actors(); err != nil {
-		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "actors"), err))
-	} else {
-		movie.Actors = actors
-	}
-
-	setML("ContentRating", "content rating data", title.ContentRating)
-
-	if directors, err := title.Directors(); err != nil {
-		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "directors"), err))
-	} else {
-		movie.Directors = directors
-	}
-
-	if genres, err := title.Genres(); err != nil {
-		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "genre information"), err))
-	} else {
-		movie.Genres = genres
-	}
-
-	if keywords, err := title.Keywords(); err != nil {
-		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "keywords"), err))
-	} else {
-		movie.Keywords = keywords
-	}
-
-	if release, err := title.ReleaseDate(); err != nil {
-		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "release date"), err))
-	} else {
-		movie.ReleaseDate = release
-	}
-
-	setML("Synopses", "synopsis", title.Synopsis)
-	setML("Titles", "movie title", title.Title)
-
-	if writers, err := title.Writers(); err != nil {
-		global.Log.Error(fmt.Errorf("%s: %s", fmt.Sprintf(errNotFound, "writers"), err))
-	} else {
-		movie.Writers = writers
-	}
+	movie.SetFieldCallback("Actors", title.Actors)
+	movie.SetFieldCallback("ContentRating", title.ContentRating)
+	movie.SetFieldCallback("Directors", title.Directors)
+	movie.SetFieldCallback("Genres", title.Genres)
+	movie.SetFieldCallback("Keywords", title.Keywords)
+	movie.SetFieldCallback("ReleaseDate", title.ReleaseDate)
+	movie.SetFieldCallback("Synopses", title.Synopsis)
+	movie.SetFieldCallback("Titles", title.Title)
+	movie.SetFieldCallback("Writers", title.Writers)
 
 	return movie, nil
 }

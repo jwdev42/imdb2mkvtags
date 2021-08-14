@@ -60,6 +60,19 @@ func SetReqAccLang(req *http.Request, lang ...string) error {
 	return nil
 }
 
+func GetBody(client *http.Client, url string, dest io.Writer, lang ...string) error {
+	req, err := NewBareReq("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	if len(lang) > 0 {
+		if err := SetReqAccLang(req, lang...); err != nil {
+			return err
+		}
+	}
+	return Body(client, req, dest)
+}
+
 func chkLang(s string) error {
 	if !regexpLang.MatchString(s) {
 		return errors.New("Malformed language string")

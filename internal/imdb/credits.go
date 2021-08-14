@@ -28,7 +28,7 @@ func NewCredits(r io.Reader) (*Credits, error) {
 	}, nil
 }
 
-func (r *Credits) Cast() ([]tags.Actor, error) {
+func (r *Credits) Actors() ([]tags.Actor, error) {
 
 	//Get the cast table
 	var table *html.Node
@@ -56,24 +56,26 @@ func (r *Credits) Cast() ([]tags.Actor, error) {
 	return actors, nil
 }
 
-func (r *Credits) NamesByID(id string) []tags.UniLingual {
-	nodes := r.namesByID(id)
-	if nodes == nil {
-		return nil
-	}
-	names := make([]tags.UniLingual, 0, len(nodes))
-	for i, n := range nodes {
-		text, err := r.textFromNameCell(n)
-		if err != nil {
-			global.Log.Error(fmt.Errorf("Row %d of table \"%s\": %s", i+1, id, err))
-		} else {
-			names = append(names, tags.UniLingual(text))
+func (r *Credits) NamesByIDCallback(id string) func() ([]tags.UniLingual, error) {
+	return func() ([]tags.UniLingual, error) {
+		nodes := r.namesByID(id)
+		if nodes == nil {
+			return nil, fmt.Errorf("Found no heading with ID \"%s\"", id)
 		}
+		names := make([]tags.UniLingual, 0, len(nodes))
+		for i, n := range nodes {
+			text, err := r.textFromNameCell(n)
+			if err != nil {
+				global.Log.Error(fmt.Errorf("Row %d of table \"%s\": %s", i+1, id, err))
+			} else {
+				names = append(names, tags.UniLingual(text))
+			}
+		}
+		if len(names) > 0 {
+			return names, nil
+		}
+		return nil, errors.New("No data found")
 	}
-	if len(names) > 0 {
-		return names
-	}
-	return nil
 }
 
 func (r *Credits) actor(firstCol *html.Node) (*tags.Actor, error) {
