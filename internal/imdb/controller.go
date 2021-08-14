@@ -17,9 +17,9 @@ import (
 const DefaultLanguage = "en-US"
 
 type options struct {
-	UseJsonLD   bool
-	UseFullCast bool
-	Languages   []string
+	UseJsonLD      bool
+	UseFullCredits bool
+	Languages      []string
 }
 
 type Controller struct {
@@ -47,9 +47,9 @@ func NewController(rawurl string) (*Controller, error) {
 	return &Controller{
 		u: u,
 		o: &options{
-			UseJsonLD:   false,
-			UseFullCast: false,
-			Languages:   []string{DefaultLanguage},
+			UseJsonLD:      false,
+			UseFullCredits: false,
+			Languages:      []string{DefaultLanguage},
 		},
 		titleID: path[2],
 	}, nil
@@ -57,8 +57,6 @@ func NewController(rawurl string) (*Controller, error) {
 
 //Parses controller options. Reconfigures the controller after parsing was successful.
 func (r *Controller) SetOptions(flags *cmdline.Flags) error {
-	const delimArgs = ":" //delimiter to separate different arguments.
-	const delimKV = "="   //delimiter to separate each argument from its value.
 
 	parseBool := func(str string, val *bool) error {
 		b, err := strconv.ParseBool(str)
@@ -71,9 +69,9 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 
 	//Parse scraper-specific options
 	if flags.Opts != nil && *flags.Opts != "" {
-		pairs := strings.Split(*flags.Opts, delimArgs)
+		pairs := strings.Split(*flags.Opts, global.DelimControllerArgs)
 		for _, pair := range pairs {
-			arg := strings.Split(pair, delimKV)
+			arg := strings.Split(pair, global.DelimControllerKV)
 			if len(arg) != 2 {
 				return fmt.Errorf("Malformed argument: %s", pair)
 			}
@@ -82,17 +80,19 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 				if err := parseBool(arg[1], &r.o.UseJsonLD); err != nil {
 					return fmt.Errorf("Malformed argument value: %s", pair)
 				}
-			case "fullcast":
-				if err := parseBool(arg[1], &r.o.UseFullCast); err != nil {
+			case "fullcredits":
+				if err := parseBool(arg[1], &r.o.UseFullCredits); err != nil {
 					return fmt.Errorf("Malformed argument value: %s", pair)
 				}
+			default:
+				return fmt.Errorf("Unknown argument: %s", arg[0])
 			}
 		}
 	}
 
 	//Parse language option
 	if flags.Lang != nil && *flags.Lang != "" {
-		r.o.Languages = strings.Split(*flags.Lang, delimArgs)
+		r.o.Languages = strings.Split(*flags.Lang, global.DelimControllerArgs)
 	}
 
 	return nil
@@ -119,7 +119,7 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		}
 	}
 
-	if r.o.UseFullCast {
+	if r.o.UseFullCredits {
 		if err := r.scrapeFullCredits(tags); err != nil {
 			global.Log.Error(err)
 		}
