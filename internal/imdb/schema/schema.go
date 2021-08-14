@@ -3,8 +3,8 @@
 package schema
 
 import (
-	"github.com/jwdev42/imdb2mkvtags/modtag"
-	"strings"
+	"github.com/jwdev42/imdb2mkvtags/internal/tags"
+	"html"
 )
 
 type Thing struct {
@@ -35,19 +35,20 @@ type Movie struct {
 	Keywords      string   `json:"keywords"`
 }
 
-//Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type
-func (r *Movie) Convert() *modtag.Movie {
+//Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type.
+//Text is HTML unescaped as a side effect.
+func (r *Movie) Convert() *tags.Movie {
 	//Naming convention:
 	//Variables derived from the receiver have the prefix 's' if they can be confused
-	//with variables derived from the struct modtag.Movie
+	//with variables derived from the struct tags.Movie
 
-	movie := new(modtag.Movie)
+	movie := new(tags.Movie)
 
 	if r.Actors != nil && len(r.Actors) > 0 {
-		actors := make([]modtag.Actor, 0, len(r.Actors))
+		actors := make([]tags.Actor, 0, len(r.Actors))
 		for _, sActor := range r.Actors {
 			if len(sActor.Name) > 0 {
-				actors = append(actors, modtag.Actor{Name: sActor.Name})
+				actors = append(actors, tags.Actor{Name: html.UnescapeString(sActor.Name)})
 			}
 		}
 		if len(actors) > 0 {
@@ -56,24 +57,24 @@ func (r *Movie) Convert() *modtag.Movie {
 	}
 
 	if len(r.ContentRating) > 0 {
-		movie.ContentRating = make([]modtag.ContentRating, 1)
-		movie.ContentRating[0].Rating = r.ContentRating
+		movie.ContentRating = make([]tags.MultiLingual, 1)
+		movie.ContentRating[0].Text = html.UnescapeString(r.ContentRating)
 	}
 
 	if len(r.DatePublished) > 0 {
-		movie.ReleaseDate = modtag.UniLingual(r.DatePublished)
+		movie.ReleaseDate = tags.UniLingual(html.UnescapeString(r.DatePublished))
 	}
 
 	if len(r.Description) > 0 {
-		movie.Synopses = make([]modtag.MultiLingual, 1)
-		movie.Synopses[0].Text = r.Description
+		movie.Synopses = make([]tags.MultiLingual, 1)
+		movie.Synopses[0].Text = html.UnescapeString(r.Description)
 	}
 
 	if r.Directors != nil && len(r.Directors) > 0 {
-		directors := make([]modtag.UniLingual, 0, len(r.Directors))
+		directors := make([]tags.UniLingual, 0, len(r.Directors))
 		for _, sDirector := range r.Directors {
 			if len(sDirector.Name) > 0 {
-				directors = append(directors, modtag.UniLingual(sDirector.Name))
+				directors = append(directors, tags.UniLingual(html.UnescapeString(sDirector.Name)))
 			}
 		}
 		if len(directors) > 0 {
@@ -81,24 +82,20 @@ func (r *Movie) Convert() *modtag.Movie {
 		}
 	}
 	if r.Genres != nil && len(r.Genres) > 0 {
-		genres := make([]modtag.MultiLingual, 0, len(r.Genres))
+		genres := make([]tags.MultiLingual, 0, len(r.Genres))
 		for _, sGenre := range r.Genres {
-			genres = append(genres, modtag.MultiLingual{Text: sGenre})
+			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre)})
 		}
 		movie.Genres = genres
 	}
 
 	if len(r.Keywords) > 0 {
-		kw := strings.Split(r.Keywords, ",")
-		movie.Keywords = make([]modtag.UniLingual, len(kw))
-		for i, v := range kw {
-			movie.Keywords[i] = modtag.UniLingual(strings.TrimSpace(v))
-		}
+		movie.Keywords = tags.UniLingual(r.Keywords)
 	}
 
 	if len(r.Name) > 0 {
-		movie.Titles = make([]modtag.MultiLingual, 1)
-		movie.Titles[0].Text = r.Name
+		movie.Titles = make([]tags.MultiLingual, 1)
+		movie.Titles[0].Text = html.UnescapeString(r.Name)
 	}
 
 	return movie

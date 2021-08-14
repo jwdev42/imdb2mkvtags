@@ -1,9 +1,8 @@
 //This file is part of imdb2mkvtags ©2021 Jörg Walter
 
-package modxml
+package xml
 
 import (
-	"bytes"
 	"encoding/xml"
 	"io"
 )
@@ -95,9 +94,5 @@ func (r *XmlWriter) OpenElements() int {
 
 //Xml-escapes b, then writes its content to a text node
 func (r *XmlWriter) WriteText(b []byte) error {
-	buf := new(bytes.Buffer)
-	if err := xml.EscapeText(buf, b); err != nil {
-		return err
-	}
-	return r.EncodeToken(xml.CharData(buf.Bytes()))
+	return r.EncodeToken(xml.CharData(b))
 }

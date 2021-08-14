@@ -1,0 +1,6 @@
+imdb2mkvtags scrapes information off the internet movie database and writes it as a xml file containing matroska tags.
+
+This software comes without any warranty. For its license, see LICENSE.
+Documentation is available in the docs folder.
+
+© 2021 Jörg Walter
