@@ -98,45 +98,28 @@ func (r *Movie) SetField(name string, data interface{}) {
 
 func (r *Movie) SetFieldCallback(name string, callback interface{}) {
 	errMsg := fmt.Sprintf("Could not set field \"%s\"", name)
-	switch callback.(type) {
-	case func() (*MultiLingual, error):
-		f := callback.(func() (*MultiLingual, error))
-		if v, err := f(); err != nil {
-			global.Log.Error(fmt.Errorf("%s: %s", errMsg, err))
-		} else {
-			r.SetField(name, []MultiLingual{*v})
-		}
-	case func() ([]MultiLingual, error):
-		f := callback.(func() ([]MultiLingual, error))
-		if v, err := f(); err != nil {
-			global.Log.Error(fmt.Errorf("%s: %s", errMsg, err))
-		} else {
-			r.SetField(name, v)
-		}
-	case func() (UniLingual, error):
-		f := callback.(func() (UniLingual, error))
-		if v, err := f(); err != nil {
-			global.Log.Error(fmt.Errorf("%s: %s", errMsg, err))
-		} else {
-			r.SetField(name, v)
-		}
-	case func() ([]UniLingual, error):
-		f := callback.(func() ([]UniLingual, error))
-		if v, err := f(); err != nil {
-			global.Log.Error(fmt.Errorf("%s: %s", errMsg, err))
-		} else {
-			r.SetField(name, v)
-		}
-	case func() ([]Actor, error):
-		f := callback.(func() ([]Actor, error))
-		if v, err := f(); err != nil {
-			global.Log.Error(fmt.Errorf("%s: %s", errMsg, err))
-		} else {
-			r.SetField(name, v)
-		}
-	default:
-		panic("Unsupported type")
+	vf := reflect.ValueOf(callback)
+
+	//verification of callback
+	if vf.Kind() != reflect.Func {
+		panic("callback must be a function")
 	}
+	if vf.Type().NumOut() != 2 {
+		panic("callback must return 2 values")
+	}
+	if n := vf.Type().Out(1).Name(); n != "error" {
+		panic(fmt.Errorf("callback's 2nd return value must be of type \"error\", but is \"%s\"", n))
+	}
+
+	rv := vf.Call(nil)
+
+	if !rv[1].IsNil() { //Error
+		err := rv[1].Interface().(error)
+		global.Log.Error(fmt.Errorf("%s: %s", errMsg, err))
+		return
+	}
+	payload := rv[0].Interface()
+	r.SetField(name, payload)
 }
 
 func (r *Movie) writeFields(xw *ixml.XmlWriter) error {

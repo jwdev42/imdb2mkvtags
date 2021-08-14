@@ -63,7 +63,7 @@ func (r *Title) Actors() ([]tags.Actor, error) {
 	return actors, nil
 }
 
-func (r *Title) ContentRating() (*tags.MultiLingual, error) {
+func (r *Title) ContentRating() ([]tags.MultiLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil || len(e) < 2 {
 		return nil, errors.New("The html element that contains the release date was not found")
@@ -72,7 +72,7 @@ func (r *Title) ContentRating() (*tags.MultiLingual, error) {
 	if text == nil {
 		return nil, errors.New("No text node found")
 	}
-	return &tags.MultiLingual{Text: text.Data, Lang: r.c.o.Languages[0]}, nil
+	return []tags.MultiLingual{tags.MultiLingual{Text: text.Data, Lang: r.c.o.Languages[0]}}, nil
 }
 
 func (r *Title) Genres() ([]tags.MultiLingual, error) {
@@ -153,12 +153,20 @@ func (r *Title) ReleaseDate() (tags.UniLingual, error) {
 	return tags.UniLingual(text.Data), nil
 }
 
-func (r *Title) Synopsis() (*tags.MultiLingual, error) {
-	return r.testID2MultiLingual("plot-xl", DefaultLanguage)
+func (r *Title) Synopsis() ([]tags.MultiLingual, error) {
+	val, err := r.testID2MultiLingual("plot-xl", DefaultLanguage)
+	if err != nil {
+		return nil, err
+	}
+	return []tags.MultiLingual{*val}, err
 }
 
-func (r *Title) Title() (*tags.MultiLingual, error) {
-	return r.testID2MultiLingual("hero-title-block__title", r.c.o.Languages[0])
+func (r *Title) Title() ([]tags.MultiLingual, error) {
+	val, err := r.testID2MultiLingual("hero-title-block__title", r.c.o.Languages[0])
+	if err != nil {
+		return nil, err
+	}
+	return []tags.MultiLingual{*val}, err
 }
 
 func (r *Title) Writers() ([]tags.UniLingual, error) {
