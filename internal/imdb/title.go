@@ -88,7 +88,7 @@ func (r *Title) Genres() ([]tags.MultiLingual, error) {
 	genres := make([]tags.MultiLingual, 0, len(spans))
 	for _, span := range spans {
 		if text := rottensoup.FirstNodeByType(span, html.TextNode); text != nil {
-			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: DefaultLanguage})
+			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: global.DefaultLanguageIMDB})
 		}
 	}
 	if len(genres) < 1 {
@@ -154,7 +154,7 @@ func (r *Title) ReleaseDate() (tags.UniLingual, error) {
 }
 
 func (r *Title) Synopsis() ([]tags.MultiLingual, error) {
-	val, err := r.testID2MultiLingual("plot-xl", DefaultLanguage)
+	val, err := r.testID2MultiLingual("plot-xl", global.DefaultLanguageIMDB)
 	if err != nil {
 		return nil, err
 	}

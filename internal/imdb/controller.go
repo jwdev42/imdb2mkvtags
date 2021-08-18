@@ -14,8 +14,6 @@ import (
 	"strings"
 )
 
-const DefaultLanguage = "en-US"
-
 type options struct {
 	UseJsonLD      bool
 	UseFullCredits bool
@@ -49,7 +47,7 @@ func NewController(rawurl string) (*Controller, error) {
 		o: &options{
 			UseJsonLD:      false,
 			UseFullCredits: false,
-			Languages:      []string{DefaultLanguage},
+			Languages:      []string{global.DefaultLanguageIMDB},
 		},
 		titleID: path[2],
 	}, nil
