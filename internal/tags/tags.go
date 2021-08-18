@@ -73,15 +73,20 @@ func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
 	return ixml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
 }
 
+type Country struct {
+	Name      string
+	LawRating UniLingual `mkv:"LAW_RATING"`
+}
+
 type Movie struct {
 	Actors       []Actor        `mkv:"ACTOR"`
+	Countries    []*Country     `mkv:"COUNTRY"`
 	DateReleased UniLingual     `mkv:"DATE_RELEASED"`
 	DateTagged   UniLingual     `mkv:"DATE_TAGGED"`
 	Directors    []UniLingual   `mkv:"DIRECTOR"`
 	Genres       []MultiLingual `mkv:"GENRE"`
 	Imdb         UniLingual     `mkv:"IMDB"`
 	Keywords     []MultiLingual `mkv:"KEYWORDS"`
-	LawRating    []MultiLingual `mkv:"LAW_RATING"`
 	Producers    []UniLingual   `mkv:"PRODUCER"`
 	Synopses     []MultiLingual `mkv:"SYNOPSIS"`
 	Titles       []MultiLingual `mkv:"TITLE"`

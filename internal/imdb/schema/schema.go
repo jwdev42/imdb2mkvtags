@@ -57,14 +57,16 @@ func (r *Movie) Convert(lang string) *tags.Movie {
 		}
 	}
 
-	if len(r.ContentRating) > 0 {
-		movie.LawRating = []tags.MultiLingual{
-			tags.MultiLingual{
-				Text: html.UnescapeString(r.ContentRating),
-				Lang: lang,
-			},
+	/*
+		if len(r.ContentRating) > 0 {
+			movie.LawRating = []tags.MultiLingual{
+				tags.MultiLingual{
+					Text: html.UnescapeString(r.ContentRating),
+					Lang: lang,
+				},
+			}
 		}
-	}
+	*/
 
 	if len(r.DatePublished) > 0 {
 		movie.DateReleased = tags.UniLingual(html.UnescapeString(r.DatePublished))

@@ -175,7 +175,7 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 	movie.SetFieldCallback("Directors", title.Directors)
 	movie.SetFieldCallback("Genres", title.Genres)
 	movie.SetFieldCallback("Keywords", title.Keywords)
-	movie.SetFieldCallback("LawRating", title.LawRating)
+	//movie.SetFieldCallback("LawRating", title.LawRating)
 	movie.SetFieldCallback("Synopses", title.Synopsis)
 	movie.SetFieldCallback("Titles", title.Title)
 	movie.SetFieldCallback("Writers", title.Writers)
