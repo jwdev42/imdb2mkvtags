@@ -63,7 +63,7 @@ func (r *Title) Actors() ([]tags.Actor, error) {
 	return actors, nil
 }
 
-func (r *Title) ContentRating() ([]tags.MultiLingual, error) {
+func (r *Title) LawRating() ([]tags.MultiLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil || len(e) < 2 {
 		return nil, errors.New("The html element that contains the release date was not found")
@@ -88,7 +88,7 @@ func (r *Title) Genres() ([]tags.MultiLingual, error) {
 	genres := make([]tags.MultiLingual, 0, len(spans))
 	for _, span := range spans {
 		if text := rottensoup.FirstNodeByType(span, html.TextNode); text != nil {
-			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: DefaultLanguage})
+			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: global.DefaultLanguageIMDB})
 		}
 	}
 	if len(genres) < 1 {
@@ -114,15 +114,15 @@ func (r *Title) Directors() ([]tags.UniLingual, error) {
 	return directors, nil
 }
 
-func (r *Title) Keywords() (tags.UniLingual, error) {
+func (r *Title) Keywords() ([]tags.MultiLingual, error) {
 	exclude := regexp.MustCompile("^[0-9]+ more$")
 	start, err := r.elementByTestID("storyline-plot-keywords")
 	if err != nil {
-		return "", errors.New("The html element that contains the keywords was not found")
+		return nil, errors.New("The html element that contains the keywords was not found")
 	}
 	keywordNodes := rottensoup.ElementsByClassName(start, "ipc-chip__text")
 	if keywordNodes == nil {
-		return "", errors.New("No keyword nodes found inside keywords container")
+		return nil, errors.New("No keyword nodes found inside keywords container")
 	}
 	keywords := make([]string, 0, len(keywordNodes))
 	for i, node := range keywordNodes {
@@ -136,12 +136,12 @@ func (r *Title) Keywords() (tags.UniLingual, error) {
 		}
 	}
 	if len(keywords) < 1 {
-		return "", errors.New("No keywords found")
+		return nil, errors.New("No keywords found")
 	}
-	return tags.UniLingual(strings.Join(keywords, ",")), nil
+	return []tags.MultiLingual{tags.MultiLingual{Text: strings.Join(keywords, ","), Lang: global.DefaultLanguageIMDB}}, nil
 }
 
-func (r *Title) ReleaseDate() (tags.UniLingual, error) {
+func (r *Title) DateReleased() (tags.UniLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil {
 		return "", errors.New("The html element that contains the release date was not found")
@@ -154,7 +154,7 @@ func (r *Title) ReleaseDate() (tags.UniLingual, error) {
 }
 
 func (r *Title) Synopsis() ([]tags.MultiLingual, error) {
-	val, err := r.testID2MultiLingual("plot-xl", DefaultLanguage)
+	val, err := r.testID2MultiLingual("plot-xl", global.DefaultLanguageIMDB)
 	if err != nil {
 		return nil, err
 	}

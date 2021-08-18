@@ -12,9 +12,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
-
-const DefaultLanguage = "en-US"
 
 type options struct {
 	UseJsonLD      bool
@@ -49,7 +48,7 @@ func NewController(rawurl string) (*Controller, error) {
 		o: &options{
 			UseJsonLD:      false,
 			UseFullCredits: false,
-			Languages:      []string{DefaultLanguage},
+			Languages:      []string{global.DefaultLanguageIMDB},
 		},
 		titleID: path[2],
 	}, nil
@@ -99,33 +98,37 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 }
 
 func (r *Controller) Scrape() (*tags.Movie, error) {
-	var tags *tags.Movie
+	//get title page
 	body := new(bytes.Buffer)
 	if err := ihttp.GetBody(nil, r.u.String(), body, r.o.Languages...); err != nil {
 		return nil, err
 	}
+
+	var movie *tags.Movie
 
 	if r.o.UseJsonLD {
 		json, err := ExtractMovieSchema(body)
 		if err != nil {
 			return nil, err
 		}
-		tags = json.Convert()
+		movie = json.Convert(r.o.Languages[0])
 	} else {
 		if t, err := r.scrapeTitlePage(body); err != nil {
 			return nil, err
 		} else {
-			tags = t
+			movie = t
 		}
 	}
 
 	if r.o.UseFullCredits {
-		if err := r.scrapeFullCredits(tags); err != nil {
+		if err := r.scrapeFullCredits(movie); err != nil {
 			global.Log.Error(err)
 		}
 	}
 
-	return tags, nil
+	movie.DateTagged = tags.UniLingual(time.Now().Format("2006-01-02"))
+
+	return movie, nil
 }
 
 func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
@@ -168,11 +171,11 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 
 	movie.Imdb = tags.UniLingual(r.titleID)
 	movie.SetFieldCallback("Actors", title.Actors)
-	movie.SetFieldCallback("ContentRating", title.ContentRating)
+	movie.SetFieldCallback("DateReleased", title.DateReleased)
 	movie.SetFieldCallback("Directors", title.Directors)
 	movie.SetFieldCallback("Genres", title.Genres)
 	movie.SetFieldCallback("Keywords", title.Keywords)
-	movie.SetFieldCallback("ReleaseDate", title.ReleaseDate)
+	movie.SetFieldCallback("LawRating", title.LawRating)
 	movie.SetFieldCallback("Synopses", title.Synopsis)
 	movie.SetFieldCallback("Titles", title.Title)
 	movie.SetFieldCallback("Writers", title.Writers)

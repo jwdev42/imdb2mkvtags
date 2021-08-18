@@ -74,17 +74,18 @@ func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
 }
 
 type Movie struct {
-	Actors        []Actor        `mkv:"ACTOR"`
-	ContentRating []MultiLingual `mkv:"LAW_RATING"`
-	Directors     []UniLingual   `mkv:"DIRECTOR"`
-	Genres        []MultiLingual `mkv:"GENRE"`
-	Imdb          UniLingual     `mkv:"IMDB"`
-	Keywords      UniLingual     `mkv:"KEYWORDS"`
-	Producers     []UniLingual   `mkv:"PRODUCER"`
-	ReleaseDate   UniLingual     `mkv:"DATE_RELEASED"`
-	Synopses      []MultiLingual `mkv:"SYNOPSIS"`
-	Titles        []MultiLingual `mkv:"TITLE"`
-	Writers       []UniLingual   `mkv:"WRITTEN_BY"`
+	Actors       []Actor        `mkv:"ACTOR"`
+	DateReleased UniLingual     `mkv:"DATE_RELEASED"`
+	DateTagged   UniLingual     `mkv:"DATE_TAGGED"`
+	Directors    []UniLingual   `mkv:"DIRECTOR"`
+	Genres       []MultiLingual `mkv:"GENRE"`
+	Imdb         UniLingual     `mkv:"IMDB"`
+	Keywords     []MultiLingual `mkv:"KEYWORDS"`
+	LawRating    []MultiLingual `mkv:"LAW_RATING"`
+	Producers    []UniLingual   `mkv:"PRODUCER"`
+	Synopses     []MultiLingual `mkv:"SYNOPSIS"`
+	Titles       []MultiLingual `mkv:"TITLE"`
+	Writers      []UniLingual   `mkv:"WRITTEN_BY"`
 }
 
 func (r *Movie) SetField(name string, data interface{}) {
