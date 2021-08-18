@@ -114,15 +114,15 @@ func (r *Title) Directors() ([]tags.UniLingual, error) {
 	return directors, nil
 }
 
-func (r *Title) Keywords() (tags.UniLingual, error) {
+func (r *Title) Keywords() ([]tags.MultiLingual, error) {
 	exclude := regexp.MustCompile("^[0-9]+ more$")
 	start, err := r.elementByTestID("storyline-plot-keywords")
 	if err != nil {
-		return "", errors.New("The html element that contains the keywords was not found")
+		return nil, errors.New("The html element that contains the keywords was not found")
 	}
 	keywordNodes := rottensoup.ElementsByClassName(start, "ipc-chip__text")
 	if keywordNodes == nil {
-		return "", errors.New("No keyword nodes found inside keywords container")
+		return nil, errors.New("No keyword nodes found inside keywords container")
 	}
 	keywords := make([]string, 0, len(keywordNodes))
 	for i, node := range keywordNodes {
@@ -136,9 +136,9 @@ func (r *Title) Keywords() (tags.UniLingual, error) {
 		}
 	}
 	if len(keywords) < 1 {
-		return "", errors.New("No keywords found")
+		return nil, errors.New("No keywords found")
 	}
-	return tags.UniLingual(strings.Join(keywords, ",")), nil
+	return []tags.MultiLingual{tags.MultiLingual{Text: strings.Join(keywords, ","), Lang: global.DefaultLanguageIMDB}}, nil
 }
 
 func (r *Title) ReleaseDate() (tags.UniLingual, error) {

@@ -79,7 +79,7 @@ type Movie struct {
 	Directors     []UniLingual   `mkv:"DIRECTOR"`
 	Genres        []MultiLingual `mkv:"GENRE"`
 	Imdb          UniLingual     `mkv:"IMDB"`
-	Keywords      UniLingual     `mkv:"KEYWORDS"`
+	Keywords      []MultiLingual `mkv:"KEYWORDS"`
 	Producers     []UniLingual   `mkv:"PRODUCER"`
 	ReleaseDate   UniLingual     `mkv:"DATE_RELEASED"`
 	Synopses      []MultiLingual `mkv:"SYNOPSIS"`

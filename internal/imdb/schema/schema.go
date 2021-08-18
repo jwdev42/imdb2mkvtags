@@ -3,6 +3,7 @@
 package schema
 
 import (
+	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"html"
 )
@@ -90,7 +91,7 @@ func (r *Movie) Convert() *tags.Movie {
 	}
 
 	if len(r.Keywords) > 0 {
-		movie.Keywords = tags.UniLingual(r.Keywords)
+		movie.Keywords = []tags.MultiLingual{tags.MultiLingual{Text: r.Keywords, Lang: global.DefaultLanguageIMDB}}
 	}
 
 	if len(r.Name) > 0 {
