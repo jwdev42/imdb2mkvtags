@@ -38,7 +38,7 @@ type Movie struct {
 
 //Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type.
 //Text is HTML unescaped as a side effect.
-func (r *Movie) Convert() *tags.Movie {
+func (r *Movie) Convert(lang string) *tags.Movie {
 	//Naming convention:
 	//Variables derived from the receiver have the prefix 's' if they can be confused
 	//with variables derived from the struct tags.Movie
@@ -58,8 +58,12 @@ func (r *Movie) Convert() *tags.Movie {
 	}
 
 	if len(r.ContentRating) > 0 {
-		movie.ContentRating = make([]tags.MultiLingual, 1)
-		movie.ContentRating[0].Text = html.UnescapeString(r.ContentRating)
+		movie.ContentRating = []tags.MultiLingual{
+			tags.MultiLingual{
+				Text: html.UnescapeString(r.ContentRating),
+				Lang: lang,
+			},
+		}
 	}
 
 	if len(r.DatePublished) > 0 {
@@ -67,8 +71,12 @@ func (r *Movie) Convert() *tags.Movie {
 	}
 
 	if len(r.Description) > 0 {
-		movie.Synopses = make([]tags.MultiLingual, 1)
-		movie.Synopses[0].Text = html.UnescapeString(r.Description)
+		movie.Synopses = []tags.MultiLingual{
+			tags.MultiLingual{
+				Text: html.UnescapeString(r.Description),
+				Lang: global.DefaultLanguageIMDB,
+			},
+		}
 	}
 
 	if r.Directors != nil && len(r.Directors) > 0 {
@@ -85,7 +93,7 @@ func (r *Movie) Convert() *tags.Movie {
 	if r.Genres != nil && len(r.Genres) > 0 {
 		genres := make([]tags.MultiLingual, 0, len(r.Genres))
 		for _, sGenre := range r.Genres {
-			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre)})
+			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre), Lang: global.DefaultLanguageIMDB})
 		}
 		movie.Genres = genres
 	}
@@ -95,8 +103,12 @@ func (r *Movie) Convert() *tags.Movie {
 	}
 
 	if len(r.Name) > 0 {
-		movie.Titles = make([]tags.MultiLingual, 1)
-		movie.Titles[0].Text = html.UnescapeString(r.Name)
+		movie.Titles = []tags.MultiLingual{
+			tags.MultiLingual{
+				Text: html.UnescapeString(r.Name),
+				Lang: global.DefaultLanguageIMDB,
+			},
+		}
 	}
 
 	return movie

@@ -108,7 +108,7 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		if err != nil {
 			return nil, err
 		}
-		tags = json.Convert()
+		tags = json.Convert(r.o.Languages[0])
 	} else {
 		if t, err := r.scrapeTitlePage(body); err != nil {
 			return nil, err
