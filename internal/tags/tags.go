@@ -76,6 +76,7 @@ func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
 type Movie struct {
 	Actors        []Actor        `mkv:"ACTOR"`
 	ContentRating []MultiLingual `mkv:"LAW_RATING"`
+	DateTagged    UniLingual     `mkv:"DATE_TAGGED"`
 	Directors     []UniLingual   `mkv:"DIRECTOR"`
 	Genres        []MultiLingual `mkv:"GENRE"`
 	Imdb          UniLingual     `mkv:"IMDB"`
