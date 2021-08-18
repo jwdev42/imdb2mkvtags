@@ -171,11 +171,11 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 
 	movie.Imdb = tags.UniLingual(r.titleID)
 	movie.SetFieldCallback("Actors", title.Actors)
-	movie.SetFieldCallback("ContentRating", title.ContentRating)
+	movie.SetFieldCallback("DateReleased", title.DateReleased)
 	movie.SetFieldCallback("Directors", title.Directors)
 	movie.SetFieldCallback("Genres", title.Genres)
 	movie.SetFieldCallback("Keywords", title.Keywords)
-	movie.SetFieldCallback("ReleaseDate", title.ReleaseDate)
+	movie.SetFieldCallback("LawRating", title.LawRating)
 	movie.SetFieldCallback("Synopses", title.Synopsis)
 	movie.SetFieldCallback("Titles", title.Title)
 	movie.SetFieldCallback("Writers", title.Writers)

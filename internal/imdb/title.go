@@ -63,7 +63,7 @@ func (r *Title) Actors() ([]tags.Actor, error) {
 	return actors, nil
 }
 
-func (r *Title) ContentRating() ([]tags.MultiLingual, error) {
+func (r *Title) LawRating() ([]tags.MultiLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil || len(e) < 2 {
 		return nil, errors.New("The html element that contains the release date was not found")
@@ -141,7 +141,7 @@ func (r *Title) Keywords() ([]tags.MultiLingual, error) {
 	return []tags.MultiLingual{tags.MultiLingual{Text: strings.Join(keywords, ","), Lang: global.DefaultLanguageIMDB}}, nil
 }
 
-func (r *Title) ReleaseDate() (tags.UniLingual, error) {
+func (r *Title) DateReleased() (tags.UniLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil {
 		return "", errors.New("The html element that contains the release date was not found")
