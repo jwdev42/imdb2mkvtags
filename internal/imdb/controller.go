@@ -47,7 +47,7 @@ func NewController(rawurl string) (*Controller, error) {
 
 	defaultLang, err := lcconv.NewLngCntry("en-US")
 	if err != nil {
-		panic("invalid default language set")
+		panic("invalid default language hardcoded into the program")
 	}
 
 	return &Controller{
@@ -56,6 +56,16 @@ func NewController(rawurl string) (*Controller, error) {
 		defaultLang: defaultLang,
 		titleID:     path[2],
 	}, nil
+}
+
+//Return IMDB's default language (english).
+func (r *Controller) DefaultLang() *lcconv.LngCntry {
+	return r.defaultLang
+}
+
+//Return the language chosen by the user.
+func (r *Controller) PreferredLang() *lcconv.LngCntry {
+	return r.lang[0]
 }
 
 //Parses controller options. Reconfigures the controller after parsing was successful.
@@ -116,7 +126,7 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		if err != nil {
 			return nil, err
 		}
-		movie = json.Convert(r.lang[0].ISO6391(), r.defaultLang.ISO6391())
+		movie = json.Convert(r.PreferredLang(), r.DefaultLang())
 	} else {
 		if t, err := r.scrapeTitlePage(body); err != nil {
 			return nil, err

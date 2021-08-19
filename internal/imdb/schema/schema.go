@@ -3,6 +3,7 @@
 package schema
 
 import (
+	"github.com/jwdev42/imdb2mkvtags/internal/lcconv"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"html"
 )
@@ -37,7 +38,7 @@ type Movie struct {
 
 //Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type.
 //Text is HTML unescaped as a side effect.
-func (r *Movie) Convert(lang, defaultLang string) *tags.Movie {
+func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie {
 	//Naming convention:
 	//Variables derived from the receiver have the prefix 's' if they can be confused
 	//with variables derived from the struct tags.Movie
@@ -75,7 +76,7 @@ func (r *Movie) Convert(lang, defaultLang string) *tags.Movie {
 		movie.Synopses = []tags.MultiLingual{
 			tags.MultiLingual{
 				Text: html.UnescapeString(r.Description),
-				Lang: defaultLang,
+				Lang: defaultLang.ISO6391(),
 			},
 		}
 	}
@@ -94,20 +95,20 @@ func (r *Movie) Convert(lang, defaultLang string) *tags.Movie {
 	if r.Genres != nil && len(r.Genres) > 0 {
 		genres := make([]tags.MultiLingual, 0, len(r.Genres))
 		for _, sGenre := range r.Genres {
-			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre), Lang: defaultLang})
+			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre), Lang: defaultLang.ISO6391()})
 		}
 		movie.Genres = genres
 	}
 
 	if len(r.Keywords) > 0 {
-		movie.Keywords = []tags.MultiLingual{tags.MultiLingual{Text: r.Keywords, Lang: defaultLang}}
+		movie.Keywords = []tags.MultiLingual{tags.MultiLingual{Text: r.Keywords, Lang: defaultLang.ISO6391()}}
 	}
 
 	if len(r.Name) > 0 {
 		movie.Titles = []tags.MultiLingual{
 			tags.MultiLingual{
 				Text: html.UnescapeString(r.Name),
-				Lang: defaultLang,
+				Lang: defaultLang.ISO6391(),
 			},
 		}
 	}
