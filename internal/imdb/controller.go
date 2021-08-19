@@ -7,6 +7,7 @@ import (
 	"github.com/jwdev42/imdb2mkvtags/internal/cmdline"
 	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	ihttp "github.com/jwdev42/imdb2mkvtags/internal/http"
+	"github.com/jwdev42/imdb2mkvtags/internal/lcconv"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"io"
 	"net/url"
@@ -18,13 +19,14 @@ import (
 type options struct {
 	UseJsonLD      bool
 	UseFullCredits bool
-	Languages      []string
 }
 
 type Controller struct {
-	u       *url.URL
-	o       *options
-	titleID string
+	u           *url.URL
+	o           *options
+	lang        []*lcconv.LngCntry
+	defaultLang *lcconv.LngCntry
+	titleID     string
 }
 
 func NewController(rawurl string) (*Controller, error) {
@@ -43,14 +45,16 @@ func NewController(rawurl string) (*Controller, error) {
 	u.Path = fmt.Sprintf("/title/%s/", path[2])
 	global.Log.Debug(fmt.Sprintf("IMDB controller: New controller with url \"%s\"", u.String()))
 
+	defaultLang, err := lcconv.NewLngCntry("en-US")
+	if err != nil {
+		panic("invalid default language set")
+	}
+
 	return &Controller{
-		u: u,
-		o: &options{
-			UseJsonLD:      false,
-			UseFullCredits: false,
-			Languages:      []string{global.DefaultLanguageIMDB},
-		},
-		titleID: path[2],
+		u:           u,
+		o:           new(options),
+		defaultLang: defaultLang,
+		titleID:     path[2],
 	}, nil
 }
 
@@ -90,9 +94,10 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 	}
 
 	//Parse language option
-	if flags.Lang != nil && *flags.Lang != "" {
-		r.o.Languages = strings.Split(*flags.Lang, global.DelimControllerArgs)
+	if flags.Lang == nil {
+		panic("Assertion failed: Command line parsing unit must set a default value for language")
 	}
+	r.lang = flags.Lang
 
 	return nil
 }
@@ -100,7 +105,7 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 func (r *Controller) Scrape() (*tags.Movie, error) {
 	//get title page
 	body := new(bytes.Buffer)
-	if err := ihttp.GetBody(nil, r.u.String(), body, r.o.Languages...); err != nil {
+	if err := ihttp.GetBody(nil, r.u.String(), body, r.lang...); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +116,7 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		if err != nil {
 			return nil, err
 		}
-		movie = json.Convert(r.o.Languages[0])
+		movie = json.Convert(r.lang[0].ISO6391(), r.defaultLang.ISO6391())
 	} else {
 		if t, err := r.scrapeTitlePage(body); err != nil {
 			return nil, err
@@ -138,7 +143,7 @@ func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 			return nil, err
 		}
 		body := new(bytes.Buffer)
-		if err := ihttp.GetBody(nil, u, body, r.o.Languages...); err != nil {
+		if err := ihttp.GetBody(nil, u, body, r.lang...); err != nil {
 			return nil, err
 		}
 		return body, nil

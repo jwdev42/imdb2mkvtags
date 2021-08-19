@@ -22,7 +22,10 @@ func write(file *os.File, data *tags.Movie) {
 
 func main() {
 
-	flags := cmdline.Parse()
+	flags, err := cmdline.Parse()
+	if err != nil {
+		global.Log.Die(fmt.Errorf("Error parsing command line: %s", err))
+	}
 
 	if len(flags.Tail) < 1 {
 		global.Log.Die("No URL specified in input")
