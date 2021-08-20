@@ -57,17 +57,6 @@ func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie
 		}
 	}
 
-	/*
-		if len(r.ContentRating) > 0 {
-			movie.LawRating = []tags.MultiLingual{
-				tags.MultiLingual{
-					Text: html.UnescapeString(r.ContentRating),
-					Lang: lang,
-				},
-			}
-		}
-	*/
-
 	if len(r.DatePublished) > 0 {
 		movie.DateReleased = tags.UniLingual(html.UnescapeString(r.DatePublished))
 	}
@@ -111,6 +100,26 @@ func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie
 				Lang: defaultLang.ISO6391(),
 			},
 		}
+	}
+
+	/*
+		if len(r.ContentRating) > 0 {
+			movie.LawRating = []tags.MultiLingual{
+				tags.MultiLingual{
+					Text: html.UnescapeString(r.ContentRating),
+					Lang: lang,
+				},
+			}
+		}
+	*/
+
+	country := &tags.Country{Name: preferredLang.Alpha3()}
+	lawRating := func() (tags.UniLingual, error) {
+		return tags.UniLingual(html.UnescapeString(r.ContentRating)), nil
+	}
+	country.SetFieldCallback("LawRating", lawRating)
+	if !country.IsEmpty() {
+		movie.Countries = []*tags.Country{country}
 	}
 
 	return movie

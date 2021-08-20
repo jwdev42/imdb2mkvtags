@@ -141,6 +141,7 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 		}
 	}
 
+	movie.Imdb = tags.UniLingual(r.titleID)
 	movie.DateTagged = tags.UniLingual(time.Now().Format("2006-01-02"))
 
 	return movie, nil
@@ -184,16 +185,21 @@ func (r *Controller) scrapeTitlePage(src io.Reader) (*tags.Movie, error) {
 
 	movie := new(tags.Movie)
 
-	movie.Imdb = tags.UniLingual(r.titleID)
 	movie.SetFieldCallback("Actors", title.Actors)
 	movie.SetFieldCallback("DateReleased", title.DateReleased)
 	movie.SetFieldCallback("Directors", title.Directors)
 	movie.SetFieldCallback("Genres", title.Genres)
 	movie.SetFieldCallback("Keywords", title.Keywords)
-	//movie.SetFieldCallback("LawRating", title.LawRating)
 	movie.SetFieldCallback("Synopses", title.Synopsis)
 	movie.SetFieldCallback("Titles", title.Title)
 	movie.SetFieldCallback("Writers", title.Writers)
+
+	country := &tags.Country{Name: r.PreferredLang().Alpha3()}
+	country.SetFieldCallback("LawRating", title.LawRating)
+
+	if !country.IsEmpty() {
+		movie.Countries = []*tags.Country{country}
+	}
 
 	return movie, nil
 }

@@ -63,16 +63,16 @@ func (r *Title) Actors() ([]tags.Actor, error) {
 	return actors, nil
 }
 
-func (r *Title) LawRating() ([]tags.MultiLingual, error) {
+func (r *Title) LawRating() (tags.UniLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil || len(e) < 2 {
-		return nil, errors.New("The html element that contains the release date was not found")
+		return "", errors.New("The html element that contains the release date was not found")
 	}
 	text := rottensoup.FirstNodeByType(e[1], html.TextNode)
 	if text == nil {
-		return nil, errors.New("No text node found")
+		return "", errors.New("No text node found")
 	}
-	return []tags.MultiLingual{tags.MultiLingual{Text: text.Data, Lang: r.c.PreferredLang().ISO6391()}}, nil
+	return tags.UniLingual(text.Data), nil
 }
 
 func (r *Title) Genres() ([]tags.MultiLingual, error) {
