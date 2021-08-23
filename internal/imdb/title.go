@@ -63,16 +63,16 @@ func (r *Title) Actors() ([]tags.Actor, error) {
 	return actors, nil
 }
 
-func (r *Title) LawRating() ([]tags.MultiLingual, error) {
+func (r *Title) LawRating() (tags.UniLingual, error) {
 	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
 	if e == nil || len(e) < 2 {
-		return nil, errors.New("The html element that contains the release date was not found")
+		return "", errors.New("The html element that contains the release date was not found")
 	}
 	text := rottensoup.FirstNodeByType(e[1], html.TextNode)
 	if text == nil {
-		return nil, errors.New("No text node found")
+		return "", errors.New("No text node found")
 	}
-	return []tags.MultiLingual{tags.MultiLingual{Text: text.Data, Lang: r.c.o.Languages[0]}}, nil
+	return tags.UniLingual(text.Data), nil
 }
 
 func (r *Title) Genres() ([]tags.MultiLingual, error) {
@@ -88,7 +88,7 @@ func (r *Title) Genres() ([]tags.MultiLingual, error) {
 	genres := make([]tags.MultiLingual, 0, len(spans))
 	for _, span := range spans {
 		if text := rottensoup.FirstNodeByType(span, html.TextNode); text != nil {
-			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: global.DefaultLanguageIMDB})
+			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: r.c.DefaultLang().ISO6391()})
 		}
 	}
 	if len(genres) < 1 {
@@ -138,7 +138,7 @@ func (r *Title) Keywords() ([]tags.MultiLingual, error) {
 	if len(keywords) < 1 {
 		return nil, errors.New("No keywords found")
 	}
-	return []tags.MultiLingual{tags.MultiLingual{Text: strings.Join(keywords, ","), Lang: global.DefaultLanguageIMDB}}, nil
+	return []tags.MultiLingual{tags.MultiLingual{Text: strings.Join(keywords, ","), Lang: r.c.DefaultLang().ISO6391()}}, nil
 }
 
 func (r *Title) DateReleased() (tags.UniLingual, error) {
@@ -154,7 +154,7 @@ func (r *Title) DateReleased() (tags.UniLingual, error) {
 }
 
 func (r *Title) Synopsis() ([]tags.MultiLingual, error) {
-	val, err := r.testID2MultiLingual("plot-xl", global.DefaultLanguageIMDB)
+	val, err := r.testID2MultiLingual("plot-xl", r.c.DefaultLang().ISO6391())
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (r *Title) Synopsis() ([]tags.MultiLingual, error) {
 }
 
 func (r *Title) Title() ([]tags.MultiLingual, error) {
-	val, err := r.testID2MultiLingual("hero-title-block__title", r.c.o.Languages[0])
+	val, err := r.testID2MultiLingual("hero-title-block__title", r.c.PreferredLang().ISO6391())
 	if err != nil {
 		return nil, err
 	}

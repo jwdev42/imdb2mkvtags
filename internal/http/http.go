@@ -5,10 +5,10 @@ package http
 import (
 	"errors"
 	"fmt"
+	"github.com/jwdev42/imdb2mkvtags/internal/lcconv"
 	"io"
 	"net/http"
 	"regexp"
-	"strings"
 )
 
 const UserAgent = "imdb2mkvtags/1.0"
@@ -45,27 +45,34 @@ func NewBareReq(method, url string, body io.Reader) (*http.Request, error) {
 	return req, nil
 }
 
-//Sets the passed language strings as the request's "Accept-Language" header field.
+//Sets the passed language objects as the request's "Accept-Language" header field.
 //Rejects formally malformed language strings to prevent header field injection.
-func SetReqAccLang(req *http.Request, lang ...string) error {
+func SetReqAccLang(req *http.Request, lang ...*lcconv.LngCntry) error {
 	if req.Header == nil {
 		req.Header = make(http.Header)
 	}
-	for _, v := range lang {
-		if err := chkLang(v); err != nil {
+	for i, v := range lang {
+		if v == nil {
+			panic("argument \"lang\" cannot be nil")
+		}
+		if err := chkLang(v.HttpHeader()); err != nil {
 			return err
 		}
+		if i == 0 {
+			req.Header.Set("Accept-Language", v.HttpHeader())
+		} else {
+			req.Header.Add("Accept-Language", v.HttpHeader())
+		}
 	}
-	req.Header.Set("Accept-Language", strings.Join(lang, ","))
 	return nil
 }
 
-func GetBody(client *http.Client, url string, dest io.Writer, lang ...string) error {
+func GetBody(client *http.Client, url string, dest io.Writer, lang ...*lcconv.LngCntry) error {
 	req, err := NewBareReq("GET", url, nil)
 	if err != nil {
 		return err
 	}
-	if len(lang) > 0 {
+	if lang != nil {
 		if err := SetReqAccLang(req, lang...); err != nil {
 			return err
 		}

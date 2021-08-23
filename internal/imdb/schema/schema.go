@@ -3,7 +3,7 @@
 package schema
 
 import (
-	"github.com/jwdev42/imdb2mkvtags/internal/global"
+	"github.com/jwdev42/imdb2mkvtags/internal/lcconv"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"html"
 )
@@ -38,7 +38,7 @@ type Movie struct {
 
 //Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type.
 //Text is HTML unescaped as a side effect.
-func (r *Movie) Convert(lang string) *tags.Movie {
+func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie {
 	//Naming convention:
 	//Variables derived from the receiver have the prefix 's' if they can be confused
 	//with variables derived from the struct tags.Movie
@@ -57,15 +57,6 @@ func (r *Movie) Convert(lang string) *tags.Movie {
 		}
 	}
 
-	if len(r.ContentRating) > 0 {
-		movie.LawRating = []tags.MultiLingual{
-			tags.MultiLingual{
-				Text: html.UnescapeString(r.ContentRating),
-				Lang: lang,
-			},
-		}
-	}
-
 	if len(r.DatePublished) > 0 {
 		movie.DateReleased = tags.UniLingual(html.UnescapeString(r.DatePublished))
 	}
@@ -74,7 +65,7 @@ func (r *Movie) Convert(lang string) *tags.Movie {
 		movie.Synopses = []tags.MultiLingual{
 			tags.MultiLingual{
 				Text: html.UnescapeString(r.Description),
-				Lang: global.DefaultLanguageIMDB,
+				Lang: defaultLang.ISO6391(),
 			},
 		}
 	}
@@ -93,22 +84,42 @@ func (r *Movie) Convert(lang string) *tags.Movie {
 	if r.Genres != nil && len(r.Genres) > 0 {
 		genres := make([]tags.MultiLingual, 0, len(r.Genres))
 		for _, sGenre := range r.Genres {
-			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre), Lang: global.DefaultLanguageIMDB})
+			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre), Lang: defaultLang.ISO6391()})
 		}
 		movie.Genres = genres
 	}
 
 	if len(r.Keywords) > 0 {
-		movie.Keywords = []tags.MultiLingual{tags.MultiLingual{Text: r.Keywords, Lang: global.DefaultLanguageIMDB}}
+		movie.Keywords = []tags.MultiLingual{tags.MultiLingual{Text: r.Keywords, Lang: defaultLang.ISO6391()}}
 	}
 
 	if len(r.Name) > 0 {
 		movie.Titles = []tags.MultiLingual{
 			tags.MultiLingual{
 				Text: html.UnescapeString(r.Name),
-				Lang: global.DefaultLanguageIMDB,
+				Lang: defaultLang.ISO6391(),
 			},
 		}
+	}
+
+	/*
+		if len(r.ContentRating) > 0 {
+			movie.LawRating = []tags.MultiLingual{
+				tags.MultiLingual{
+					Text: html.UnescapeString(r.ContentRating),
+					Lang: lang,
+				},
+			}
+		}
+	*/
+
+	country := &tags.Country{Name: preferredLang.Alpha3()}
+	lawRating := func() (tags.UniLingual, error) {
+		return tags.UniLingual(html.UnescapeString(r.ContentRating)), nil
+	}
+	country.SetFieldCallback("LawRating", lawRating)
+	if !country.IsEmpty() {
+		movie.Countries = []*tags.Country{country}
 	}
 
 	return movie

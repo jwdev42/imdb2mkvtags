@@ -1,3 +1,7 @@
+github.com/biter777/countries v1.3.4 h1:/wXFeLPAbdl7YvrpJT3p7GGftJTz6uUmOmha2P/DX9A=
+github.com/biter777/countries v1.3.4/go.mod h1:1HSpZ526mYqKJcpT5Ti1kcGQ0L0SrXWIaptUWjFfv2E=
+github.com/emvi/iso-639-1 v1.0.1 h1:4s6P8Uxc/RDkwCpxAr4NHOT/15a1swy9IQkB8PJCWVI=
+github.com/emvi/iso-639-1 v1.0.1/go.mod h1:mghC4MDFyszxzH98ujf/K5whvB6B0nV4qCa5u94dP84=
 github.com/jwdev42/logger v0.2.1 h1:OvzPYsHqh/CBsbtsfrnVh+8f9ABdFLm7cRaWB2xFe+Q=
 github.com/jwdev42/logger v0.2.1/go.mod h1:EIu0oxc2tArYy4+/FhSEmqBVOKByji/Ri1aB3yAXEGA=
 github.com/jwdev42/rottensoup v0.2.0 h1:UOzdpGluv6LqmeEr68uZ7z8bGZVKE7gGXwKioaarZ3g=

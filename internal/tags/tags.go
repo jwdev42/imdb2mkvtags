@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/jwdev42/imdb2mkvtags/internal/global"
+	"github.com/jwdev42/imdb2mkvtags/internal/util/dynamic"
 	ixml "github.com/jwdev42/imdb2mkvtags/internal/xml"
 	"io"
 	"reflect"
@@ -19,6 +20,10 @@ func (r EmptyTag) Error() string {
 
 func NewEmptyTag(tag string) EmptyTag {
 	return EmptyTag(fmt.Sprintf("Tag is empty or incomplete: %s", tag))
+}
+
+type TagWriter interface {
+	WriteTag(*ixml.XmlWriter, string) error
 }
 
 type Actor struct {
@@ -73,157 +78,85 @@ func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
 	return ixml.WriteTagWithSubtags(xw, "Simple", subtags, nil)
 }
 
+type Country struct {
+	Name      string
+	nonempty  bool
+	LawRating UniLingual `mkv:"LAW_RATING"`
+}
+
+func (r *Country) SetFieldCallback(name string, callback interface{}) {
+	if err := dynamic.SetStructFieldCallback(name, r, callback); err != nil {
+		global.Log.Error(fmt.Errorf("Country: Could not set field \"%s\": %s", name, err))
+	} else {
+		r.nonempty = true
+	}
+}
+
+func (r *Country) IsEmpty() bool {
+	return !r.nonempty
+}
+
+func (r *Country) WriteTag(xw *ixml.XmlWriter, name string) error {
+	if name != "COUNTRY" {
+		panic("Country's method \"WriteTag\" must be called with name == \"COUNTRY\"")
+	}
+	if err := xw.EncodeToken(ixml.NewStartElementSimple("Simple")); err != nil {
+		return err
+	}
+
+	//Start Name tag
+	if err := xw.EncodeToken(ixml.NewStartElementSimple("Name")); err != nil {
+		return err
+	}
+	if err := xw.WriteText([]byte(name)); err != nil {
+		return err
+	}
+	if err := xw.CloseElement(); err != nil {
+		return err
+	}
+	//End Name tag
+
+	//Start String tag
+	if err := xw.EncodeToken(ixml.NewStartElementSimple("String")); err != nil {
+		return err
+	}
+	if err := xw.WriteText([]byte(r.Name)); err != nil {
+		return err
+	}
+	if err := xw.CloseElement(); err != nil {
+		return err
+	}
+	//End String tag
+
+	if err := writeTaggedFields(xw, r); err != nil {
+		return err
+	}
+
+	if err := xw.CloseElement(); err != nil {
+		return err
+	}
+	return nil
+}
+
 type Movie struct {
 	Actors       []Actor        `mkv:"ACTOR"`
+	Countries    []*Country     `mkv:"COUNTRY"`
 	DateReleased UniLingual     `mkv:"DATE_RELEASED"`
 	DateTagged   UniLingual     `mkv:"DATE_TAGGED"`
 	Directors    []UniLingual   `mkv:"DIRECTOR"`
 	Genres       []MultiLingual `mkv:"GENRE"`
 	Imdb         UniLingual     `mkv:"IMDB"`
 	Keywords     []MultiLingual `mkv:"KEYWORDS"`
-	LawRating    []MultiLingual `mkv:"LAW_RATING"`
 	Producers    []UniLingual   `mkv:"PRODUCER"`
 	Synopses     []MultiLingual `mkv:"SYNOPSIS"`
 	Titles       []MultiLingual `mkv:"TITLE"`
 	Writers      []UniLingual   `mkv:"WRITTEN_BY"`
 }
 
-func (r *Movie) SetField(name string, data interface{}) {
-	val := reflect.Indirect(reflect.ValueOf(r))
-	fieldVal := val.FieldByName(name)
-	if fieldVal == (reflect.Value{}) {
-		panic(fmt.Errorf(`Field "%s" not a member of struct Movie`, name))
-	}
-	fieldVal.Set(reflect.ValueOf(data))
-}
-
 func (r *Movie) SetFieldCallback(name string, callback interface{}) {
-	errMsg := fmt.Sprintf("Could not set field \"%s\"", name)
-	vf := reflect.ValueOf(callback)
-
-	//verification of callback
-	if vf.Kind() != reflect.Func {
-		panic("callback must be a function")
+	if err := dynamic.SetStructFieldCallback(name, r, callback); err != nil {
+		global.Log.Error(fmt.Errorf("Movie: Could not set field \"%s\": %s", name, err))
 	}
-	if vf.Type().NumOut() != 2 {
-		panic("callback must return 2 values")
-	}
-	if n := vf.Type().Out(1).Name(); n != "error" {
-		panic(fmt.Errorf("callback's 2nd return value must be of type \"error\", but is \"%s\"", n))
-	}
-
-	rv := vf.Call(nil)
-
-	if !rv[1].IsNil() { //Error
-		err := rv[1].Interface().(error)
-		global.Log.Error(fmt.Errorf("%s: %s", errMsg, err))
-		return
-	}
-	payload := rv[0].Interface()
-	r.SetField(name, payload)
-}
-
-func (r *Movie) writeFields(xw *ixml.XmlWriter) error {
-
-	hasMethodWriteTag := func(v reflect.Value) bool {
-		_, ok := v.Type().MethodByName("WriteTag")
-		return ok
-	}
-
-	//Returns true if the StructField has a tag with key "mkv" and a non-empty value.
-	hasMkvTag := func(desc reflect.StructField) bool {
-		if desc.Tag.Get("mkv") != "" {
-			return true
-		}
-		return false
-	}
-
-	//Returns the version of v that has a method WriteTag, it first tries v, then a pointer to v.
-	//If v is already a pointer and has no method WriteTag, a zero-value of reflect.Value is returned.
-	//If neither v nor its pointer has a method WriteTag, a zero-value of reflect.Value is returned.
-	fieldWriter := func(v reflect.Value) reflect.Value {
-		if hasMethodWriteTag(v) {
-			return v
-		} else if v.Kind() == reflect.Ptr {
-			return reflect.Value{}
-		} else if hasMethodWriteTag(v.Addr()) {
-			return v.Addr()
-		}
-		return reflect.Value{}
-	}
-
-	write := func(v reflect.Value, tagName string) error {
-		fw := fieldWriter(v)
-		if fw == (reflect.Value{}) {
-			panic("Object does not have a Method \"WriteTag\"")
-		}
-		if err := r.writeField(xw, fw, tagName); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	iterate := func(slice reflect.Value, tagName string) error {
-		if slice.Len() < 1 {
-			return NewEmptyTag(tagName)
-		}
-		for i := 0; i < slice.Len(); i++ {
-			e := slice.Index(i)
-			if err := write(e, tagName); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	inspectField := func(fieldVal reflect.Value, fieldDesc reflect.StructField) error {
-		mkvTag := fieldDesc.Tag.Get("mkv")
-		if mkvTag == "" {
-			panic("function requires an non-empty mkv struct tag")
-		}
-		if fieldVal.Kind() == reflect.Slice {
-			return iterate(fieldVal, mkvTag)
-		}
-		return write(fieldVal, mkvTag)
-	}
-
-	structVal := reflect.Indirect(reflect.ValueOf(r))
-	for i := 0; i < structVal.NumField(); i++ {
-		fieldDesc := structVal.Type().Field(i)
-		if !hasMkvTag(fieldDesc) {
-			continue
-		}
-		if err := inspectField(structVal.Field(i), fieldDesc); err != nil {
-			switch t := err.(type) {
-			case EmptyTag:
-				global.Log.Debug(t)
-			default:
-				return t
-			}
-		}
-	}
-	return nil
-}
-
-func (r *Movie) writeField(xw *ixml.XmlWriter, field reflect.Value, tagName string) error {
-	tagWriter := field.MethodByName("WriteTag")
-	if tagWriter == (reflect.Value{}) {
-		panic("field has no method \"WriteTag\"")
-	}
-	var ret []reflect.Value
-	if len(tagName) < 1 {
-		ret = tagWriter.Call([]reflect.Value{reflect.ValueOf(xw)})
-	} else {
-		ret = tagWriter.Call([]reflect.Value{reflect.ValueOf(xw), reflect.ValueOf(tagName)})
-	}
-	if ret == nil || len(ret) < 1 {
-		panic("ret cannot be nil and must contain one return value")
-	}
-	if !ret[0].IsNil() {
-		return ret[0].Interface().(error)
-	}
-
-	return nil
 }
 
 func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
@@ -246,7 +179,7 @@ func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
 		}
 	}
 
-	if err := r.writeFields(xw); err != nil {
+	if err := writeTaggedFields(xw, r); err != nil {
 		return err
 	}
 
@@ -278,6 +211,56 @@ func WriteTags(w io.Writer, tagWriter func(*ixml.XmlWriter) error) error {
 	}
 	if _, err := w.Write([]byte{'\n'}); err != nil {
 		return err
+	}
+	return nil
+}
+
+func writeTaggedFields(xw *ixml.XmlWriter, rec interface{}) error {
+
+	write := func(field reflect.Value, tag string) error {
+		i := field.Interface()
+		if tw, ok := i.(TagWriter); ok {
+			if err := tw.WriteTag(xw, tag); err != nil {
+				return err
+			}
+		} else {
+			panic("Field is not a TagWriter")
+		}
+		return nil
+	}
+
+	ptr := func(v reflect.Value) reflect.Value {
+		if v.Type().Kind() == reflect.Ptr {
+			return v
+		}
+		return v.Addr()
+	}
+
+	iterate := func(slice reflect.Value, tag string) error {
+		for i := 0; i < slice.Len(); i++ {
+			e := slice.Index(i)
+			if err := write(ptr(e), tag); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	fields, tags := dynamic.FieldsByStructTag("mkv", rec)
+	for i, field := range fields {
+		if field.Kind() == reflect.Slice {
+			if field.Len() < 1 {
+				global.Log.Debug(NewEmptyTag(tags[i]))
+				continue
+			}
+			if err := iterate(field, tags[i]); err != nil {
+				return err
+			}
+		} else {
+			if err := write(ptr(field), tags[i]); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
