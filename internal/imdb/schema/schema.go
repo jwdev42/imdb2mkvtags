@@ -102,17 +102,6 @@ func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie
 		}
 	}
 
-	/*
-		if len(r.ContentRating) > 0 {
-			movie.LawRating = []tags.MultiLingual{
-				tags.MultiLingual{
-					Text: html.UnescapeString(r.ContentRating),
-					Lang: lang,
-				},
-			}
-		}
-	*/
-
 	country := &tags.Country{Name: preferredLang.Alpha3()}
 	lawRating := func() (tags.UniLingual, error) {
 		return tags.UniLingual(html.UnescapeString(r.ContentRating)), nil
