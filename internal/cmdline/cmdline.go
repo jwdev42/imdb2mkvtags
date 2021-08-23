@@ -12,16 +12,18 @@ import (
 
 //Structure that holds the parsed command line flags
 type Flags struct {
-	Loglevel logger.LevelFlag
-	Out      *string //output file
-	rawLang  *string //language-country combination(s)
-	Lang     []*lcconv.LngCntry
-	Opts     *string  //options for the scraper
-	Tail     []string //non-processed args
+	LegalInfo *bool //Print legal info?
+	Loglevel  logger.LevelFlag
+	Out       *string //output file
+	rawLang   *string //language-country combination(s)
+	Lang      []*lcconv.LngCntry
+	Opts      *string  //options for the scraper
+	Tail      []string //non-processed args
 }
 
 func Parse() (*Flags, error) {
 	f := &Flags{Loglevel: logger.LevelFlag(global.DefaultLoglevel)}
+	f.LegalInfo = flag.Bool("print-legal-info", false, "Print legal information and exit.")
 	f.Out = flag.String("o", "", "Sets the output file.")
 	f.rawLang = flag.String("lang", "en-US", "Sets the preferred language(s) for http requests. Multiple languages are separated by a colon.")
 	f.Opts = flag.String("opts", "", "Scraper-specific options, separated by a colon.")

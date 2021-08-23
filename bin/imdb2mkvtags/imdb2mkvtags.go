@@ -26,6 +26,9 @@ func main() {
 	if err != nil {
 		global.Log.Die(fmt.Errorf("Error parsing command line: %s", err))
 	}
+	if *flags.LegalInfo {
+		printLegalInfo()
+	}
 
 	if len(flags.Tail) < 1 {
 		global.Log.Die("No URL specified in input")
