@@ -138,7 +138,7 @@ func (r *Title) Keywords() ([]tags.MultiLingual, error) {
 	if len(keywords) < 1 {
 		return nil, errors.New("No keywords found")
 	}
-	return []tags.MultiLingual{tags.MultiLingual{Text: strings.Join(keywords, ","), Lang: r.c.DefaultLang().ISO6391()}}, nil
+	return []tags.MultiLingual{{Text: strings.Join(keywords, ","), Lang: r.c.DefaultLang().ISO6391()}}, nil
 }
 
 func (r *Title) DateReleased() (tags.UniLingual, error) {
