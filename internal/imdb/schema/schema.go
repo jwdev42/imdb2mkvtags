@@ -63,7 +63,7 @@ func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie
 
 	if len(r.Description) > 0 {
 		movie.Synopses = []tags.MultiLingual{
-			tags.MultiLingual{
+			{
 				Text: html.UnescapeString(r.Description),
 				Lang: defaultLang.ISO6391(),
 			},
@@ -90,28 +90,17 @@ func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie
 	}
 
 	if len(r.Keywords) > 0 {
-		movie.Keywords = []tags.MultiLingual{tags.MultiLingual{Text: r.Keywords, Lang: defaultLang.ISO6391()}}
+		movie.Keywords = []tags.MultiLingual{{Text: r.Keywords, Lang: defaultLang.ISO6391()}}
 	}
 
 	if len(r.Name) > 0 {
 		movie.Titles = []tags.MultiLingual{
-			tags.MultiLingual{
+			{
 				Text: html.UnescapeString(r.Name),
 				Lang: defaultLang.ISO6391(),
 			},
 		}
 	}
-
-	/*
-		if len(r.ContentRating) > 0 {
-			movie.LawRating = []tags.MultiLingual{
-				tags.MultiLingual{
-					Text: html.UnescapeString(r.ContentRating),
-					Lang: lang,
-				},
-			}
-		}
-	*/
 
 	country := &tags.Country{Name: preferredLang.Alpha3()}
 	lawRating := func() (tags.UniLingual, error) {
