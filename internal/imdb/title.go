@@ -154,7 +154,7 @@ func (r *Title) DateReleased() (tags.UniLingual, error) {
 }
 
 func (r *Title) Synopsis() ([]tags.MultiLingual, error) {
-	val, err := r.testID2MultiLingual("plot-xl", r.c.DefaultLang().ISO6391())
+	val, err := r.testID2MultiLingual("plot-xl", r.c.PreferredLang().ISO6391())
 	if err != nil {
 		return nil, err
 	}
