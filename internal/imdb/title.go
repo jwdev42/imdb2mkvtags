@@ -64,11 +64,11 @@ func (r *Title) Actors() ([]tags.Actor, error) {
 }
 
 func (r *Title) LawRating() (tags.UniLingual, error) {
-	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
-	if e == nil || len(e) < 2 {
+	spans := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "sc-52284603-2 iTRONr"})
+	if spans == nil || len(spans) < 2 {
 		return "", errors.New("The html element that contains the release date was not found")
 	}
-	text := rottensoup.FirstNodeByType(e[1], html.TextNode)
+	text := rottensoup.FirstNodeByType(spans[1], html.TextNode)
 	if text == nil {
 		return "", errors.New("No text node found")
 	}
@@ -142,11 +142,11 @@ func (r *Title) Keywords() ([]tags.MultiLingual, error) {
 }
 
 func (r *Title) DateReleased() (tags.UniLingual, error) {
-	e := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "TitleBlockMetaData__ListItemText-sc-12ein40-2 jedhex"})
-	if e == nil {
+	spans := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "sc-52284603-2 iTRONr"})
+	if spans == nil || len(spans) < 1 {
 		return "", errors.New("The html element that contains the release date was not found")
 	}
-	text := rottensoup.FirstNodeByType(e[0], html.TextNode)
+	text := rottensoup.FirstNodeByType(spans[0], html.TextNode)
 	if text == nil {
 		return "", errors.New("No text node found")
 	}
