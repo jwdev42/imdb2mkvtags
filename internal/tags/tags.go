@@ -12,18 +12,9 @@ import (
 	"reflect"
 )
 
-type EmptyTag string
-
-func (r EmptyTag) Error() string {
-	return string(r)
-}
-
-func NewEmptyTag(tag string) EmptyTag {
-	return EmptyTag(fmt.Sprintf("Tag is empty or incomplete: %s", tag))
-}
-
 type TagWriter interface {
-	WriteTag(*ixml.XmlWriter, string) error
+	WriteTag(*ixml.XmlWriter, string) error //Writes the tag's content to an xml file
+	CheckTag() error                        //Returns an error if the tag is missing mandatory data
 }
 
 type Actor struct {
@@ -31,9 +22,16 @@ type Actor struct {
 	Character string
 }
 
-func (r *Actor) WriteTag(xw *ixml.XmlWriter, name string) error {
+func (r *Actor) CheckTag() error {
 	if len(r.Name) < 1 {
-		return NewEmptyTag(name)
+		return fmt.Errorf("Name not set for actor")
+	}
+	return nil
+}
+
+func (r *Actor) WriteTag(xw *ixml.XmlWriter, name string) error {
+	if err := r.CheckTag(); err != nil {
+		return err
 	}
 	var fc func(*ixml.XmlWriter) error
 	if r.Character != "" {
@@ -50,9 +48,16 @@ func (r *Actor) WriteTag(xw *ixml.XmlWriter, name string) error {
 
 type UniLingual string
 
-func (r UniLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
+func (r UniLingual) CheckTag() error {
 	if len(r) < 1 {
-		return NewEmptyTag(name)
+		return fmt.Errorf("Tag is empty")
+	}
+	return nil
+}
+
+func (r UniLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
+	if err := r.CheckTag(); err != nil {
+		return err
 	}
 	subtags := make([][2]string, 0, 2)
 	subtags = append(subtags, [2]string{"Name", name})
@@ -65,9 +70,16 @@ type MultiLingual struct {
 	Lang string
 }
 
-func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
+func (r *MultiLingual) CheckTag() error {
 	if len(r.Text) < 1 {
-		return NewEmptyTag(name)
+		return fmt.Errorf("Tag is empty")
+	}
+	return nil
+}
+
+func (r *MultiLingual) WriteTag(xw *ixml.XmlWriter, name string) error {
+	if err := r.CheckTag(); err != nil {
+		return err
 	}
 	subtags := make([][2]string, 0, 3)
 	subtags = append(subtags, [2]string{"Name", name})
@@ -94,6 +106,16 @@ func (r *Country) SetFieldCallback(name string, callback interface{}) {
 
 func (r *Country) IsEmpty() bool {
 	return !r.nonempty
+}
+
+func (r *Country) CheckTag() error {
+	if len(r.Name) < 1 {
+		return fmt.Errorf("Missing country name")
+	}
+	if r.IsEmpty() {
+		return fmt.Errorf("Country does not contain any payload")
+	}
+	return nil
 }
 
 func (r *Country) WriteTag(xw *ixml.XmlWriter, name string) error {
@@ -159,6 +181,10 @@ func (r *Movie) SetFieldCallback(name string, callback interface{}) {
 	}
 }
 
+func (r *Movie) CheckTag() error {
+	return nil
+}
+
 func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
 
 	//Write "Header" with TargetTypeValue=50
@@ -220,6 +246,10 @@ func writeTaggedFields(xw *ixml.XmlWriter, rec interface{}) error {
 	write := func(field reflect.Value, tag string) error {
 		i := field.Interface()
 		if tw, ok := i.(TagWriter); ok {
+			if err := tw.CheckTag(); err != nil {
+				global.Log.Debug(fmt.Sprintf("writeTaggedFields: Did not write tag \"%s\": %s", tag, err))
+				return nil
+			}
 			if err := tw.WriteTag(xw, tag); err != nil {
 				return err
 			}
@@ -237,6 +267,10 @@ func writeTaggedFields(xw *ixml.XmlWriter, rec interface{}) error {
 	}
 
 	iterate := func(slice reflect.Value, tag string) error {
+		if slice.Len() < 1 {
+			global.Log.Debug(fmt.Sprintf("writeTaggedFields: Skipping empty slice tag \"%s\"", tag))
+			return nil
+		}
 		for i := 0; i < slice.Len(); i++ {
 			e := slice.Index(i)
 			if err := write(ptr(e), tag); err != nil {
@@ -249,10 +283,6 @@ func writeTaggedFields(xw *ixml.XmlWriter, rec interface{}) error {
 	fields, tags := dynamic.FieldsByStructTag("mkv", rec)
 	for i, field := range fields {
 		if field.Kind() == reflect.Slice {
-			if field.Len() < 1 {
-				global.Log.Debug(NewEmptyTag(tags[i]))
-				continue
-			}
 			if err := iterate(field, tags[i]); err != nil {
 				return err
 			}

@@ -64,15 +64,11 @@ func (r *Title) Actors() ([]tags.Actor, error) {
 }
 
 func (r *Title) LawRating() (tags.UniLingual, error) {
-	spans := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "sc-52284603-2 iTRONr"})
-	if spans == nil || len(spans) < 2 {
-		return "", errors.New("The html element that contains the release date was not found")
+	text, err := r.extractFromHeroTitleBlock(1)
+	if err != nil {
+		return "", err
 	}
-	text := rottensoup.FirstNodeByType(spans[1], html.TextNode)
-	if text == nil {
-		return "", errors.New("No text node found")
-	}
-	return tags.UniLingual(text.Data), nil
+	return tags.UniLingual(text), nil
 }
 
 func (r *Title) Genres() ([]tags.MultiLingual, error) {
@@ -142,15 +138,11 @@ func (r *Title) Keywords() ([]tags.MultiLingual, error) {
 }
 
 func (r *Title) DateReleased() (tags.UniLingual, error) {
-	spans := rottensoup.ElementsByTagAndAttr(r.root, atom.Span, html.Attribute{Key: "class", Val: "sc-52284603-2 iTRONr"})
-	if spans == nil || len(spans) < 1 {
-		return "", errors.New("The html element that contains the release date was not found")
+	text, err := r.extractFromHeroTitleBlock(0)
+	if err != nil {
+		return "", err
 	}
-	text := rottensoup.FirstNodeByType(spans[0], html.TextNode)
-	if text == nil {
-		return "", errors.New("No text node found")
-	}
-	return tags.UniLingual(text.Data), nil
+	return tags.UniLingual(text), nil
 }
 
 func (r *Title) Synopsis() ([]tags.MultiLingual, error) {
@@ -213,6 +205,29 @@ func (r *Title) textByTestID(id string) (string, error) {
 	text := rottensoup.FirstNodeByType(node, html.TextNode)
 	if text == nil {
 		return "", fmt.Errorf("No text node found that is a child of element with attribute %s=\"%s\"", attrTestID, id)
+	}
+	return text.Data, nil
+}
+
+func (r *Title) extractFromHeroTitleBlock(num int) (string, error) {
+	ul, err := r.elementByTestID("hero-title-block__metadata")
+	if err != nil {
+		return "", err
+	}
+	items := rottensoup.ElementsByTag(ul, atom.Li)
+	if items == nil {
+		return "", errors.New("Hero-Title-Block list contains no elements")
+	}
+	if len(items) < num {
+		return "", fmt.Errorf("Hero-Title-Block list index out of bounds (max: %d, is: %d)", len(items), num)
+	}
+	spans := rottensoup.ElementsByTag(items[num], atom.Span)
+	if spans == nil {
+		return "", fmt.Errorf("No span element found in Hero-Title-Block list item %d", num)
+	}
+	text := rottensoup.FirstNodeByType(spans[0], html.TextNode)
+	if text == nil {
+		return "", errors.New("No text node found")
 	}
 	return text.Data, nil
 }
