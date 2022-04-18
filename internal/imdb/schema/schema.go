@@ -65,7 +65,7 @@ func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie
 		movie.Synopses = []tags.MultiLingual{
 			{
 				Text: html.UnescapeString(r.Description),
-				Lang: defaultLang.ISO6391(),
+				Lang: preferredLang.ISO6391(),
 			},
 		}
 	}
@@ -84,7 +84,7 @@ func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie
 	if r.Genres != nil && len(r.Genres) > 0 {
 		genres := make([]tags.MultiLingual, 0, len(r.Genres))
 		for _, sGenre := range r.Genres {
-			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre), Lang: defaultLang.ISO6391()})
+			genres = append(genres, tags.MultiLingual{Text: html.UnescapeString(sGenre), Lang: preferredLang.ISO6391()})
 		}
 		movie.Genres = genres
 	}

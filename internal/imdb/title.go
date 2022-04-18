@@ -84,7 +84,7 @@ func (r *Title) Genres() ([]tags.MultiLingual, error) {
 	genres := make([]tags.MultiLingual, 0, len(spans))
 	for _, span := range spans {
 		if text := rottensoup.FirstNodeByType(span, html.TextNode); text != nil {
-			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: r.c.DefaultLang().ISO6391()})
+			genres = append(genres, tags.MultiLingual{Text: text.Data, Lang: r.c.PreferredLang().ISO6391()})
 		}
 	}
 	if len(genres) < 1 {
