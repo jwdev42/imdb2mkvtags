@@ -31,19 +31,7 @@ func parseCreditsList(root *html.Node) (creditsList, error) {
 		return nil, errors.New("CreditsList: No entries found in credits list")
 	}
 	for i, entry := range entries {
-
-		//Extract label
-		labelNode := rottensoup.FirstElementByClassName(entry, "ipc-metadata-list-item__label")
-		if labelNode == nil {
-			global.Log.Error(fmt.Errorf("CreditsList: Missing label for entry %d in credits list", i))
-			continue
-		}
-		labelTextNode := rottensoup.FirstNodeByType(labelNode, html.TextNode)
-		if labelTextNode == nil {
-			global.Log.Error(fmt.Errorf("CreditsList: Label for entry %d in credits list contains no text", i))
-			continue
-		}
-		label, err := list.label(labelTextNode.Data)
+		label, err := list.label(i)
 		if err != nil {
 			global.Log.Error(fmt.Errorf("CreditsList: %s", err))
 		}
@@ -81,20 +69,14 @@ func parseCreditsList(root *html.Node) (creditsList, error) {
 	return list, nil
 }
 
-func (r creditsList) label(input string) (string, error) {
-	switch input {
-	case "Director":
-		fallthrough
-	case "Directors":
+func (r creditsList) label(pos int) (string, error) {
+	switch pos {
+	case 0:
 		return "directors", nil
-	case "Writer":
-		fallthrough
-	case "Writers":
+	case 1:
 		return "writers", nil
-	case "Star":
-		fallthrough
-	case "Stars":
+	case 2:
 		return "actors", nil
 	}
-	return "", fmt.Errorf("Unknown label \"%s\"", input)
+	return "", fmt.Errorf("No known label for list index %d", pos)
 }
