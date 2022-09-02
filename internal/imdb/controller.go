@@ -19,6 +19,7 @@ import (
 type options struct {
 	UseJsonLD      bool
 	UseFullCredits bool
+	UseKeywords    bool
 }
 
 type Controller struct {
@@ -88,14 +89,19 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 			if len(arg) != 2 {
 				return fmt.Errorf("Malformed argument: %s", pair)
 			}
+			const malformedVal = "Malformed argument value: %s"
 			switch arg[0] {
 			case "jsonld":
 				if err := parseBool(arg[1], &r.o.UseJsonLD); err != nil {
-					return fmt.Errorf("Malformed argument value: %s", pair)
+					return fmt.Errorf(malformedVal, pair)
 				}
 			case "fullcredits":
 				if err := parseBool(arg[1], &r.o.UseFullCredits); err != nil {
-					return fmt.Errorf("Malformed argument value: %s", pair)
+					return fmt.Errorf(malformedVal, pair)
+				}
+			case "keywords":
+				if err := parseBool(arg[1], &r.o.UseKeywords); err != nil {
+					return fmt.Errorf(malformedVal, pair)
 				}
 			default:
 				return fmt.Errorf("Unknown argument: %s", arg[0])
