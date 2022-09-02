@@ -1,4 +1,4 @@
-//This file is part of imdb2mkvtags ©2021 Jörg Walter
+//This file is part of imdb2mkvtags ©2021-2022 Jörg Walter
 
 package http
 
@@ -14,10 +14,12 @@ import (
 const UserAgent = "imdb2mkvtags/1.0"
 
 var regexpLang = regexp.MustCompile("^[a-z]{2}(-[A-Z]{2})?$")
+var internalClient = new(http.Client) //Default client for this library.
 
+//Makes an HTTP request and writes the body to dest. If client is nil, the library's default client will be used.
 func Body(client *http.Client, req *http.Request, dest io.Writer) error {
 	if client == nil {
-		client = new(http.Client)
+		client = internalClient
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -67,6 +69,8 @@ func SetReqAccLang(req *http.Request, lang ...*lcconv.LngCntry) error {
 	return nil
 }
 
+//Makes an HTTP request to URL url, writes the answer's body to dest. If client is nil the library's default client will be used.
+//If lang is not nil, the parameter will be used to set the request's Accept-Language parameter.
 func GetBody(client *http.Client, url string, dest io.Writer, lang ...*lcconv.LngCntry) error {
 	req, err := NewBareReq("GET", url, nil)
 	if err != nil {
