@@ -1,3 +1,5 @@
+//This file is part of imdb2mkvtags ©2022 Jörg Walter
+
 package imdb
 
 import (
@@ -16,10 +18,12 @@ import (
 	"time"
 )
 
+//IMDB-specific options passed via parameter "opts"
 type options struct {
 	UseJsonLD      bool
 	UseFullCredits bool
 	UseKeywords    bool
+	KeywordLimit   int
 }
 
 type Controller struct {
@@ -103,6 +107,12 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 				if err := parseBool(arg[1], &r.o.UseKeywords); err != nil {
 					return fmt.Errorf(malformedVal, pair)
 				}
+			case "keyword-limit":
+				limit, err := strconv.Atoi(arg[1])
+				if err != nil {
+					return fmt.Errorf("Illegal argument for %s", arg[0])
+				}
+				r.o.KeywordLimit = limit
 			default:
 				return fmt.Errorf("Unknown argument: %s", arg[0])
 			}
@@ -160,6 +170,7 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 }
 
 func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
+	global.Log.Debug("Scraping credits page")
 	fetchFullCredits := func(u string) (io.Reader, error) {
 		u, err := TitleUrl2CreditsUrl(r.u.String())
 		if err != nil {
@@ -190,15 +201,27 @@ func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 }
 
 func (r *Controller) scrapeKeywordPage(movie *tags.Movie) error {
+	//Parse keyword page
+	global.Log.Debug("Scraping keyword page")
 	keywords, err := ParseKeywordPage(r.u.String()+"keywords", r.PreferredLang())
 	if err != nil {
 		return err
 	}
-	keywordsTag := make([]tags.MultiLingual, len(keywords))
-	for i, keyword := range keywords {
-		keywordsTag[i].Text = keyword.Name
+	//Set the limit of exported keywords if a limit was given
+	var limit int
+	if r.o.KeywordLimit > 0 && r.o.KeywordLimit < len(keywords) {
+		limit = r.o.KeywordLimit
+	} else {
+		limit = len(keywords)
+	}
+	//Copy the requested amount of keywords into tag objects
+	keywordsTag := make([]tags.MultiLingual, limit)
+	for i := 0; i < limit; i++ {
+		keywordsTag[i].Text = keywords[i].Name
 		keywordsTag[i].Lang = r.DefaultLang().ISO6391() //At the moment keywords are in english only, if IMDB changes that, it must also be changed here to PreferredLanguage().
 	}
+	global.Log.Debug(fmt.Sprintf("scrapeKeywordPage: Adding %d keywords", len(keywordsTag)))
+	//Deploy the keyword tags to the movie object
 	movie.Keywords = keywordsTag
 	return nil
 }
