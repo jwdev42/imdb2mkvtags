@@ -143,7 +143,13 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 
 	if r.o.UseFullCredits {
 		if err := r.scrapeFullCredits(movie); err != nil {
-			global.Log.Error(err)
+			global.Log.Error(fmt.Errorf("Could not scrape full credits: %s", err))
+		}
+	}
+
+	if r.o.UseKeywords {
+		if err := r.scrapeKeywordPage(movie); err != nil {
+			global.Log.Error(fmt.Errorf("Could not scrape keywords: %s", err))
 		}
 	}
 
@@ -180,6 +186,20 @@ func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 	movie.SetFieldCallback("Directors", credits.NamesByIDCallback("director"))
 	movie.SetFieldCallback("Producers", credits.NamesByIDCallback("producer"))
 	movie.SetFieldCallback("Writers", credits.NamesByIDCallback("writer"))
+	return nil
+}
+
+func (r *Controller) scrapeKeywordPage(movie *tags.Movie) error {
+	keywords, err := ParseKeywordPage(r.u.String()+"keywords", r.PreferredLang())
+	if err != nil {
+		return err
+	}
+	keywordsTag := make([]tags.MultiLingual, len(keywords))
+	for i, keyword := range keywords {
+		keywordsTag[i].Text = keyword.Name
+		keywordsTag[i].Lang = r.DefaultLang().ISO6391() //At the moment keywords are in english only, if IMDB changes that, it must also be changed here to PreferredLanguage().
+	}
+	movie.Keywords = keywordsTag
 	return nil
 }
 
