@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	"github.com/jwdev42/imdb2mkvtags/internal/imdb/schema"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"github.com/jwdev42/rottensoup"
@@ -43,19 +44,48 @@ func (r *Title) parseCreditsList() error {
 	return nil
 }
 
+//Scrapes actors and their characters from the title page.
 func (r *Title) Actors() ([]tags.Actor, error) {
-	if r.credits == nil {
-		if err := r.parseCreditsList(); err != nil {
-			return nil, err
+	//Closure for scraping the actor's character
+	scrapeCharacter := func(node *html.Node) (string, error) {
+		const testIDCharacter = "cast-item-characters-link"
+		entry := rottensoup.FirstElementByAttr(node, html.Attribute{Key: "data-testid", Val: testIDCharacter})
+		if entry == nil {
+			return "", errors.New("No character entry available")
 		}
+		textNode := rottensoup.FirstNodeByType(entry, html.TextNode)
+		if textNode == nil {
+			return "", errors.New("Character entry contains no text")
+		}
+		return textNode.Data, nil
 	}
-	names := r.credits["actors"]
-	if len(names) < 1 {
-		return nil, errors.New("No actors found")
+	const testIDActors = "title-cast-item__actor"
+	entries := rottensoup.ElementsByAttr(r.root, html.Attribute{Key: "data-testid", Val: testIDActors})
+	if entries == nil {
+		return nil, fmt.Errorf("No actors found with testid '%s'", testIDActors)
 	}
-	actors := make([]tags.Actor, len(names))
-	for i, name := range names {
-		actors[i].Name = name
+	actors := make([]tags.Actor, 0, len(entries))
+	for _, entry := range entries {
+		actor := tags.Actor{}
+		//Find the text node with the actor's name
+		textNode := rottensoup.FirstNodeByType(entry, html.TextNode)
+		if textNode == nil {
+			global.Log.Info("Skipping Actor entry without text node")
+			continue
+		}
+		actor.Name = textNode.Data
+		//Look up the character the actor plays
+		character, err := scrapeCharacter(entry.Parent)
+		if err != nil {
+			global.Log.Info(fmt.Errorf("Could not find the character played by %s: %s", actor.Name, err))
+		} else {
+			actor.Character = character
+		}
+		//Adding actor to the list of actors
+		actors = append(actors, actor)
+	}
+	if len(actors) < 1 {
+		return nil, errors.New("No actors found: No text node in at least one actor data field")
 	}
 	return actors, nil
 }
@@ -124,7 +154,7 @@ func (r *Title) Synopsis() ([]tags.MultiLingual, error) {
 }
 
 func (r *Title) Title() ([]tags.MultiLingual, error) {
-	val, err := r.testID2MultiLingual("hero-title-block__title", r.c.PreferredLang().ISO6391())
+	val, err := r.testID2MultiLingual("hero__pageTitle", r.c.PreferredLang().ISO6391())
 	if err != nil {
 		return nil, err
 	}
@@ -180,9 +210,13 @@ func (r *Title) textByTestID(id string) (string, error) {
 }
 
 func (r *Title) extractFromHeroTitleBlock(num int) (string, error) {
-	ul, err := r.elementByTestID("hero-title-block__metadata")
+	title, err := r.elementByTestID("hero__pageTitle")
 	if err != nil {
 		return "", err
+	}
+	ul := rottensoup.FirstElementByTag(title.Parent, atom.Ul)
+	if ul == nil {
+		return "", errors.New("")
 	}
 	items := rottensoup.ElementsByTag(ul, atom.Li)
 	if items == nil {
@@ -191,9 +225,9 @@ func (r *Title) extractFromHeroTitleBlock(num int) (string, error) {
 	if len(items) < num {
 		return "", fmt.Errorf("Hero-Title-Block list index out of bounds (max: %d, is: %d)", len(items), num)
 	}
-	spans := rottensoup.ElementsByTag(items[num], atom.Span)
+	spans := rottensoup.ElementsByTag(items[num], atom.A)
 	if spans == nil {
-		return "", fmt.Errorf("No span element found in Hero-Title-Block list item %d", num)
+		return "", fmt.Errorf("No link element found in Hero-Title-Block list item %d", num)
 	}
 	text := rottensoup.FirstNodeByType(spans[0], html.TextNode)
 	if text == nil {
