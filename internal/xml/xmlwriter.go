@@ -92,7 +92,7 @@ func (r *XmlWriter) OpenElements() int {
 	return r.s.elements
 }
 
-//Xml-escapes b, then writes its content to a text node
+// Xml-escapes b, then writes its content to a text node
 func (r *XmlWriter) WriteText(b []byte) error {
 	return r.EncodeToken(xml.CharData(b))
 }

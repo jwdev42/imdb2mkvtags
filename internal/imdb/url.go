@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-//Returns true if title is a formally valid imdb title id
+// Returns true if title is a formally valid imdb title id
 func IsTitleID(title string) bool {
 	return isValidID("tt", title)
 }

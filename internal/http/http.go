@@ -16,7 +16,7 @@ const UserAgent = "imdb2mkvtags/1.0"
 var regexpLang = regexp.MustCompile("^[a-z]{2}(-[A-Z]{2})?$")
 var internalClient = new(http.Client) //Default client for this library.
 
-//Makes an HTTP request and writes the body to dest. If client is nil, the library's default client will be used.
+// Makes an HTTP request and writes the body to dest. If client is nil, the library's default client will be used.
 func Body(client *http.Client, req *http.Request, dest io.Writer) error {
 	if client == nil {
 		client = internalClient
@@ -36,7 +36,7 @@ func Body(client *http.Client, req *http.Request, dest io.Writer) error {
 	return nil
 }
 
-//Returns a new http request with default header fields
+// Returns a new http request with default header fields
 func NewBareReq(method, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
@@ -47,8 +47,8 @@ func NewBareReq(method, url string, body io.Reader) (*http.Request, error) {
 	return req, nil
 }
 
-//Sets the passed language objects as the request's "Accept-Language" header field.
-//Rejects formally malformed language strings to prevent header field injection.
+// Sets the passed language objects as the request's "Accept-Language" header field.
+// Rejects formally malformed language strings to prevent header field injection.
 func SetReqAccLang(req *http.Request, lang ...*lcconv.LngCntry) error {
 	if req.Header == nil {
 		req.Header = make(http.Header)
@@ -69,8 +69,8 @@ func SetReqAccLang(req *http.Request, lang ...*lcconv.LngCntry) error {
 	return nil
 }
 
-//Makes an HTTP request to URL url, writes the answer's body to dest. If client is nil the library's default client will be used.
-//If lang is not nil, the parameter will be used to set the request's Accept-Language parameter.
+// Makes an HTTP request to URL url, writes the answer's body to dest. If client is nil the library's default client will be used.
+// If lang is not nil, the parameter will be used to set the request's Accept-Language parameter.
 func GetBody(client *http.Client, url string, dest io.Writer, lang ...*lcconv.LngCntry) error {
 	req, err := NewBareReq("GET", url, nil)
 	if err != nil {

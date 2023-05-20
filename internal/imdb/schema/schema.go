@@ -36,8 +36,8 @@ type Movie struct {
 	Keywords      string   `json:"keywords"`
 }
 
-//Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type.
-//Text is HTML unescaped as a side effect.
+// Converts the imdb-imported json movie schema to imdb2mkvtags' internal data type.
+// Text is HTML unescaped as a side effect.
 func (r *Movie) Convert(preferredLang, defaultLang *lcconv.LngCntry) *tags.Movie {
 	//Naming convention:
 	//Variables derived from the receiver have the prefix 's' if they can be confused

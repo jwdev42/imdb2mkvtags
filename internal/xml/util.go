@@ -4,7 +4,7 @@ package xml
 
 import "encoding/xml"
 
-//Returns a StartElement that has no attributes and resides in the default namespace
+// Returns a StartElement that has no attributes and resides in the default namespace
 func NewStartElementSimple(name string) xml.StartElement {
 	return xml.StartElement{Name: xml.Name{Local: name}}
 }

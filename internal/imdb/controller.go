@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-//IMDB-specific options passed via parameter "opts"
+// IMDB-specific options passed via parameter "opts"
 type options struct {
 	UseJsonLD      bool
 	UseFullCredits bool
@@ -63,17 +63,17 @@ func NewController(rawurl string) (*Controller, error) {
 	}, nil
 }
 
-//Return IMDB's default language (english).
+// Return IMDB's default language (english).
 func (r *Controller) DefaultLang() *lcconv.LngCntry {
 	return r.defaultLang
 }
 
-//Return the language chosen by the user.
+// Return the language chosen by the user.
 func (r *Controller) PreferredLang() *lcconv.LngCntry {
 	return r.lang[0]
 }
 
-//Parses controller options. Reconfigures the controller after parsing was successful.
+// Parses controller options. Reconfigures the controller after parsing was successful.
 func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 
 	parseBool := func(str string, val *bool) error {

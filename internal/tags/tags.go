@@ -216,7 +216,7 @@ func (r *Movie) WriteTag(xw *ixml.XmlWriter) error {
 	return nil
 }
 
-//Writes the matroska tags as an xml file
+// Writes the matroska tags as an xml file
 func WriteTags(w io.Writer, tagWriter func(*ixml.XmlWriter) error) error {
 	xw := ixml.NewXmlWriter(w)
 	xw.Indent("", "\t")

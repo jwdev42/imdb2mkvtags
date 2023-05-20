@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-//Represents the list containing directors, writers and stars on an imdb title page.
+// Represents the list containing directors, writers and stars on an imdb title page.
 type creditsList map[string][]string
 
 func parseCreditsList(root *html.Node) (creditsList, error) {

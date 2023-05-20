@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-//assigns data to field name of struct rec
+// assigns data to field name of struct rec
 func SetStructField(name string, rec, data interface{}) {
 	val := reflect.Indirect(reflect.ValueOf(rec))
 	fieldVal := val.FieldByName(name)
@@ -42,8 +42,8 @@ func SetStructFieldCallback(name string, rec, callback interface{}) error {
 	return nil
 }
 
-//Returns all fields of rec that have a non-empty struct tag of the given key and all corresponding tag values.
-//Returns nil, nil if no such fields were found. "rec" must be a pointer to a struct.
+// Returns all fields of rec that have a non-empty struct tag of the given key and all corresponding tag values.
+// Returns nil, nil if no such fields were found. "rec" must be a pointer to a struct.
 func FieldsByStructTag(key string, rec interface{}) ([]reflect.Value, []string) {
 	fields := make([]reflect.Value, 0, 10)
 	tags := make([]string, 0, 10)

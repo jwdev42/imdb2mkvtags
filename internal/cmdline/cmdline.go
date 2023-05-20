@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-//Structure that holds the parsed command line flags
+// Structure that holds the parsed command line flags
 type Flags struct {
 	LegalInfo *bool //Print legal info?
 	Loglevel  logger.LevelFlag

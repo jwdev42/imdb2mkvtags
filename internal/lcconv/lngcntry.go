@@ -12,7 +12,7 @@ import (
 
 var regexpCountryCode = regexp.MustCompile("^[A-Z]{2}$")
 
-//Provides information about language & country
+// Provides information about language & country
 type LngCntry struct {
 	iso6391 string //ISO-639-1 language code
 	cc      countries.CountryCode
@@ -45,17 +45,17 @@ func NewLngCntry(input string) (*LngCntry, error) {
 	}, nil
 }
 
-//Returns the 2-character language code.
+// Returns the 2-character language code.
 func (r *LngCntry) ISO6391() string {
 	return r.iso6391
 }
 
-//Returns the Alpha-2 country code.
+// Returns the Alpha-2 country code.
 func (r *LngCntry) Alpha2() string {
 	return r.cc.Alpha2()
 }
 
-//Returns the Alpha-3 country code.
+// Returns the Alpha-3 country code.
 func (r *LngCntry) Alpha3() string {
 	return r.cc.Alpha3()
 }

@@ -17,7 +17,7 @@ import (
 
 const attrTestID = "data-testid"
 
-//represents title pages https://www.imdb.com/title/$titleID/
+// represents title pages https://www.imdb.com/title/$titleID/
 type Title struct {
 	c       *Controller
 	root    *html.Node
@@ -44,7 +44,7 @@ func (r *Title) parseCreditsList() error {
 	return nil
 }
 
-//Scrapes actors and their characters from the title page.
+// Scrapes actors and their characters from the title page.
 func (r *Title) Actors() ([]tags.Actor, error) {
 	//Closure for scraping the actor's character
 	scrapeCharacter := func(node *html.Node) (string, error) {
@@ -236,7 +236,7 @@ func (r *Title) extractFromHeroTitleBlock(num int) (string, error) {
 	return text.Data, nil
 }
 
-//Scrapes the json-ld data from an imdb page and loads it into a movie schema object.
+// Scrapes the json-ld data from an imdb page and loads it into a movie schema object.
 func ExtractMovieSchema(src io.Reader) (*schema.Movie, error) {
 	root, err := html.Parse(src)
 	if err != nil {

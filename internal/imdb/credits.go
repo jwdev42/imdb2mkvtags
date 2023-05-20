@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-//represents "fullcredits" pages https://www.imdb.com/title/$titleID/fullcredits
+// represents "fullcredits" pages https://www.imdb.com/title/$titleID/fullcredits
 type Credits struct {
 	root *html.Node
 }
@@ -129,10 +129,10 @@ func (r *Credits) actor(firstCol *html.Node) (*tags.Actor, error) {
 	return actor, nil
 }
 
-//The table that contains the names for a specific class of cast (directors, writers) except actors
-//is preceded by a heading that has an id. This function evaluates the html table that is
-//the heading's sibling and extracts all table cells that contain names. These are then
-//returned as a slice. Nil will be returned if no names were found.
+// The table that contains the names for a specific class of cast (directors, writers) except actors
+// is preceded by a heading that has an id. This function evaluates the html table that is
+// the heading's sibling and extracts all table cells that contain names. These are then
+// returned as a slice. Nil will be returned if no names were found.
 func (r *Credits) namesByID(id string) []*html.Node {
 	heading := rottensoup.ElementByID(r.root, id)
 	if heading == nil {
