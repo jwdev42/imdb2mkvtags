@@ -33,7 +33,7 @@ func Parse() (*Flags, error) {
 		return nil, err
 	}
 	f.Tail = flag.Args()
-	global.Log.SetLevel(int(f.Loglevel))
+	global.Log.SetLevel(logger.Level(f.Loglevel))
 	return f, nil
 }
 

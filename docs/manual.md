@@ -49,7 +49,7 @@ Only in effect if option keywords is *true*. Set it to 5 to mimic the behaviour 
 
 ###### fullcredits=*bool*
 
-Additionally scrapes IMDB's fullcredits page for the given movie if enabled. Disabled by default.
+Additionally scrapes IMDB's fullcredits page for the given movie if enabled. Disabled by default. Only scrapes the 50 most relevant tags as IMDB does not make the full dataset available in the html document anymore.
 
 ###### jsonld=*bool*
 
