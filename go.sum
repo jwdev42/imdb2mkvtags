@@ -1,10 +1,10 @@
-github.com/biter777/countries v1.6.4 h1:Ss0Uqd7gnMBhjrqz9dMlMXT4fjVufIg526uGJY7B5/0=
-github.com/biter777/countries v1.6.4/go.mod h1:1HSpZ526mYqKJcpT5Ti1kcGQ0L0SrXWIaptUWjFfv2E=
+github.com/biter777/countries v1.7.5 h1:MJ+n3+rSxWQdqVJU8eBy9RqcdH6ePPn4PJHocVWUa+Q=
+github.com/biter777/countries v1.7.5/go.mod h1:1HSpZ526mYqKJcpT5Ti1kcGQ0L0SrXWIaptUWjFfv2E=
 github.com/emvi/iso-639-1 v1.1.0 h1:EhZiYVA+ysa/b7+0T2DD9hcX7E/5sh4o1KyDAIPu7VE=
 github.com/emvi/iso-639-1 v1.1.0/go.mod h1:CSA53/Tx0xF9bk2DEA0Mr0wTdIxq7pqoVZgBOfoL5GI=
 github.com/jwdev42/logger v0.4.1 h1:zEHzYDY0IYCoXSDNUjWS0S7LNPo7yKDEiafQVLIge2E=
 github.com/jwdev42/logger v0.4.1/go.mod h1:UBva0ugjFDDmFf0D8xJ5YPbL4/8NrVvRgmDFhxHe+zk=
-github.com/jwdev42/rottensoup v0.2.3 h1:w1uBwmL8jDZHl758rgHOg1lhPDHRjfVDwQcTQdHcUVE=
-github.com/jwdev42/rottensoup v0.2.3/go.mod h1:GeZteOohMNS2m8YKXVoeD58ZxrPCRpBF8UL8EZTBSEE=
-golang.org/x/net v0.25.0 h1:d/OCCoBEUq33pjydKrGQhw7IlUPI2Oylr+8qLx49kac=
-golang.org/x/net v0.25.0/go.mod h1:JkAGAh7GEvH74S6FOH42FLoXpXbE/aqXSrIQjXgsiwM=
+github.com/jwdev42/rottensoup v0.2.4 h1:ZQrK0PghwsMCz9P4IQ+EUOTZwYAfaaWUSuaUFTvEPmM=
+github.com/jwdev42/rottensoup v0.2.4/go.mod h1:ViipJpywE39Gx7lPlMfeeMWaxZoYf9KiIfMVMnfrrl4=
+golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=
+golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=
