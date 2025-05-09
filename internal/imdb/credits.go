@@ -3,15 +3,19 @@ package imdb
 import (
 	"errors"
 	"fmt"
-	"github.com/jwdev42/imdb2mkvtags/internal/global"
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"github.com/jwdev42/rottensoup"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"io"
 	"os"
+	"regexp"
+	"slices"
 	"strings"
 )
+
+var matchNameLink = regexp.MustCompile("name\\/nm")
+var matchCharacterLink = regexp.MustCompile("characters\\/nm")
 
 // represents "fullcredits" pages https://www.imdb.com/title/$titleID/fullcredits
 type Credits struct {
@@ -30,18 +34,14 @@ func NewCredits(r io.Reader) (*Credits, error) {
 
 func (r *Credits) Actors() ([]tags.Actor, error) {
 
-	//Get the cast table
-	var table *html.Node
-	{
-		tables := rottensoup.ElementsByTagAndAttr(r.root, atom.Table, html.Attribute{Key: "class", Val: "cast_list"})
-		if len(tables) < 1 {
-			return nil, errors.New("No cast table found")
-		}
-		table = tables[0]
+	//Get the cast subsection
+	table := r.elementByTestID("sub-section-cast")
+	if table == nil {
+		return nil, errors.New("No cast subsection found")
 	}
 
-	actors := make([]tags.Actor, 0, 10)
-	rows := rottensoup.ElementsByTagAndAttr(table, atom.Td, html.Attribute{Key: "class", Val: "primary_photo"})
+	actors := make([]tags.Actor, 0, 100)
+	rows := rottensoup.ElementsByTag(table, atom.Li)
 	for i, row := range rows {
 		actor, err := r.actor(row)
 		if err != nil {
@@ -56,36 +56,21 @@ func (r *Credits) Actors() ([]tags.Actor, error) {
 	return actors, nil
 }
 
-func (r *Credits) NamesByIDCallback(id string) func() ([]tags.UniLingual, error) {
-	return func() ([]tags.UniLingual, error) {
-		nodes := r.namesByID(id)
-		if nodes == nil {
-			return nil, fmt.Errorf("Found no heading with ID \"%s\"", id)
-		}
-		names := make([]tags.UniLingual, 0, len(nodes))
-		for i, n := range nodes {
-			text, err := r.textFromNameCell(n)
-			if err != nil {
-				global.Log.Error(fmt.Errorf("Row %d of table \"%s\": %s", i+1, id, err))
-			} else {
-				names = append(names, tags.UniLingual(text))
-			}
-		}
-		if len(names) > 0 {
-			return names, nil
-		}
-		return nil, errors.New("No data found")
-	}
+func (r *Credits) Directors() ([]tags.UniLingual, error) {
+	return r.scrapeUnilingualSubSection("sub-section-director")
 }
 
-func (r *Credits) actor(firstCol *html.Node) (*tags.Actor, error) {
+func (r *Credits) Producers() ([]tags.UniLingual, error) {
+	return r.scrapeUnilingualSubSection("sub-section-producer")
+}
 
-	trimmedCellText := func(cell *html.Node) (string, error) {
-		link := rottensoup.FirstElementByTag(cell, atom.A)
-		if link == nil {
-			return "", errors.New("No hyperlink found inside table cell")
-		}
-		text := link.FirstChild
+func (r *Credits) Writers() ([]tags.UniLingual, error) {
+	return r.scrapeUnilingualSubSection("sub-section-writer")
+}
+
+func (r *Credits) actor(entry *html.Node) (*tags.Actor, error) {
+	getLinkText := func(parent *html.Node) (string, error) {
+		text := parent.FirstChild
 		if text == nil || text.Type != html.TextNode {
 			return "", errors.New("Hyperlink contains no text")
 		}
@@ -97,62 +82,82 @@ func (r *Credits) actor(firstCol *html.Node) (*tags.Actor, error) {
 	}
 
 	//Get actor's name
+	actorMatches := rottensoup.ElementsByAttrMatch(entry, "", "href", matchNameLink)
+	if actorMatches == nil || len(actorMatches) < 2 {
+		return nil, errors.New("No actor hyperlink found inside list entry")
+	}
 	var actor *tags.Actor
-	actorCol := rottensoup.NextSiblingByTag(firstCol, atom.Td)
-	if actorCol == nil {
-		return nil, errors.New("No actor column found")
-	}
-	name, err := trimmedCellText(actorCol)
+	actorName, err := getLinkText(actorMatches[1])
 	if err != nil {
-		return nil, fmt.Errorf("Could not extract actor's name: %s", err)
+		return nil, fmt.Errorf("Failed to extract actor string: %s", err)
 	}
-	actor = &tags.Actor{Name: name}
+	actor = &tags.Actor{Name: actorName}
 
 	//Get actor's character
-	var characterCol *html.Node
-	for n := actorCol.NextSibling; n != nil; n = n.NextSibling {
-		if n.Data == "td" {
-			for _, attr := range n.Attr {
-				if attr.Namespace == "" && attr.Key == "class" && attr.Val == "character" {
-					characterCol = n
-					break
-				}
-			}
-		}
+	characterMatches := rottensoup.ElementsByAttrMatch(entry, "", "href", matchCharacterLink)
+	if characterMatches == nil {
+		return actor, fmt.Errorf("No character found for actor %q", actorName)
 	}
-	if characterCol != nil {
-		character, err := trimmedCellText(characterCol)
-		if err == nil {
-			actor.Character = character
-		}
+	characterName, err := getLinkText(characterMatches[0])
+	if err != nil {
+		return actor, fmt.Errorf("Failed to extract character string for actor %q: %s", actorName, err)
 	}
+	actor.Character = characterName
 	return actor, nil
 }
 
-// The table that contains the names for a specific class of cast (directors, writers) except actors
-// is preceded by a heading that has an id. This function evaluates the html table that is
-// the heading's sibling and extracts all table cells that contain names. These are then
-// returned as a slice. Nil will be returned if no names were found.
-func (r *Credits) namesByID(id string) []*html.Node {
-	heading := rottensoup.ElementByID(r.root, id)
-	if heading == nil {
-		return nil
+func (r *Credits) scrapeUnilingualSubSection(testID string) ([]tags.UniLingual, error) {
+	texts, err := r.scrapeTextsFromSubSection(testID)
+	if err != nil {
+		return nil, err
 	}
-	table := rottensoup.NextElementSibling(heading)
-	if table.DataAtom != atom.Table {
-		return nil
+	uniLingualTexts := make([]tags.UniLingual, len(texts))
+	for i, text := range texts {
+		uniLingualTexts[i] = tags.UniLingual(text)
 	}
-	return rottensoup.ElementsByTagAndAttr(table, atom.Td, html.Attribute{Key: "class", Val: "name"})
+	return uniLingualTexts, nil
 }
 
-func (r *Credits) textFromNameCell(n *html.Node) (string, error) {
-	link := rottensoup.FirstElementByTag(n, atom.A)
-	if link == nil {
-		return "", errors.New("No hyperlink found inside table cell")
+func (r *Credits) scrapeTextsFromSubSection(testID string) ([]string, error) {
+	links, err := r.nameLinksFromSubSection(testID)
+	if err != nil {
+		return nil, err
 	}
-	text := rottensoup.FirstNodeByType(link, html.TextNode)
-	if text == nil {
-		return "", errors.New("Hyperlink has no child that is a text node")
+	texts := r.extractTextChildren(links)
+	if texts == nil {
+		return nil, fmt.Errorf("Could not extract any text nodes from subsection %q", testID)
 	}
-	return strings.TrimSpace(text.Data), nil
+	return slices.Compact(texts), nil
+}
+
+func (r *Credits) nameLinksFromSubSection(testID string) ([]*html.Node, error) {
+	subSection := r.elementByTestID(testID)
+	if subSection == nil {
+		return nil, fmt.Errorf("No subsection %q found", testID)
+	}
+	return rottensoup.ElementsByAttrMatch(subSection, "", "href", matchNameLink), nil
+}
+
+// Reads the first child of each element in element. If it is a text node,
+// its text will be appended to the output slice.
+// Returns nil if elements is nil or empty.
+func (r *Credits) extractTextChildren(elements []*html.Node) []string {
+	if elements == nil || len(elements) == 0 {
+		return nil
+	}
+	texts := make([]string, 0, len(elements))
+	for _, element := range elements {
+		child := element.FirstChild
+		if child == nil {
+			continue
+		}
+		if child.Type == html.TextNode && child.Data != "" {
+			texts = append(texts, child.Data)
+		}
+	}
+	return texts
+}
+
+func (r *Credits) elementByTestID(testID string) *html.Node {
+	return rottensoup.FirstElementByAttr(r.root, html.Attribute{Key: "data-testid", Val: testID})
 }

@@ -194,9 +194,9 @@ func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 	}
 
 	movie.SetFieldCallback("Actors", credits.Actors)
-	movie.SetFieldCallback("Directors", credits.NamesByIDCallback("director"))
-	movie.SetFieldCallback("Producers", credits.NamesByIDCallback("producer"))
-	movie.SetFieldCallback("Writers", credits.NamesByIDCallback("writer"))
+	movie.SetFieldCallback("Directors", credits.Directors)
+	movie.SetFieldCallback("Producers", credits.Producers)
+	movie.SetFieldCallback("Writers", credits.Writers)
 	return nil
 }
 

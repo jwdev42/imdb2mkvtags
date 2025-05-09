@@ -100,7 +100,7 @@ func (r *Title) LawRating() (tags.UniLingual, error) {
 
 func (r *Title) Genres() ([]tags.MultiLingual, error) {
 	const errNoGenreData = "No genre data available"
-	node, err := r.elementByTestID("genres")
+	node, err := r.elementByTestID("interests")
 	if err != nil {
 		return nil, err
 	}
