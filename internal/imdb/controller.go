@@ -13,6 +13,7 @@ import (
 	"github.com/jwdev42/imdb2mkvtags/internal/tags"
 	"io"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -27,7 +28,8 @@ type options struct {
 }
 
 type Controller struct {
-	u           *url.URL
+	urlScheme   string
+	urlCountry  string
 	o           *options
 	lang        []*lcconv.LngCntry
 	defaultLang *lcconv.LngCntry
@@ -39,38 +41,66 @@ func NewController(rawurl string) (*Controller, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	//validate url
-	path := strings.Split(u.Path, "/")
-	if len(path) < 3 || path[1] != "title" || !IsTitleID(path[2]) {
-		return nil, errors.New("Unsupported or invalid URL")
-	}
-
-	//rebuild url path
-	u.Path = fmt.Sprintf("/title/%s/", path[2])
-	global.Log.Debug(fmt.Sprintf("IMDB controller: New controller with url \"%s\"", u.String()))
-
+	// set american english as default language
 	defaultLang, err := lcconv.NewLngCntry("en-US")
 	if err != nil {
 		panic("invalid default language hardcoded into the program")
 	}
-
-	return &Controller{
-		u:           u,
+	// create controller
+	cntrl := &Controller{
+		urlScheme:   u.Scheme,
 		o:           new(options),
+		lang:        make([]*lcconv.LngCntry, 0),
 		defaultLang: defaultLang,
-		titleID:     path[2],
-	}, nil
+	}
+	// validate url
+	if !path.IsAbs(u.Path) {
+		return nil, errors.New("IMDB URL must have an absolute path")
+	}
+	path := strings.Split(u.Path, "/")
+	if len(path) >= 4 && path[2] == "title" && IsTitleID(path[3]) {
+		cntrl.titleID = path[3]
+	} else if len(path) >= 3 && path[1] == "title" && IsTitleID(path[2]) {
+		cntrl.titleID = path[2]
+	} else {
+		return nil, errors.New("IMDB URL validation failed")
+	}
+	global.Log.Debug(fmt.Sprintf("IMDB controller: New controller for title \"%s\"", cntrl.titleID))
+	return cntrl, nil
 }
 
-// Return IMDB's default language (english).
+// Return IMDB's default language.
+// At the moment this is hard-coded to english.
 func (r *Controller) DefaultLang() *lcconv.LngCntry {
 	return r.defaultLang
 }
 
-// Return the language chosen by the user.
+// Return the most significant language chosen by the user if one was set.
+// Return the default language otherwise.
 func (r *Controller) PreferredLang() *lcconv.LngCntry {
+	if len(r.lang) == 0 {
+		return r.defaultLang
+	}
 	return r.lang[0]
+}
+
+// Return the controller's title URL.
+func (r *Controller) TitleURL() string {
+	if r.urlCountry != "" {
+		return fmt.Sprintf("%s://imdb.com/%s/title/%s",
+			r.urlScheme, url.PathEscape(r.urlCountry), url.PathEscape(r.titleID))
+	}
+	return fmt.Sprintf("%s://imdb.com/title/%s", r.urlScheme, url.PathEscape(r.titleID))
+}
+
+// Return the controller's credits page URL.
+func (r *Controller) CreditsURL() string {
+	return r.TitleURL() + "/fullcredits"
+}
+
+// Return the controller's keywords page URL.
+func (r *Controller) KeywordsURL() string {
+	return r.TitleURL() + "/keywords"
 }
 
 // Parses controller options. Reconfigures the controller after parsing was successful.
@@ -120,10 +150,9 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 	}
 
 	//Parse language option
-	if flags.Lang == nil {
-		panic("Assertion failed: Command line parsing unit must set a default value for language")
+	if flags.Lang != nil {
+		r.lang = flags.Lang
 	}
-	r.lang = flags.Lang
 
 	return nil
 }
@@ -131,7 +160,7 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 func (r *Controller) Scrape() (*tags.Movie, error) {
 	//get title page
 	body := new(bytes.Buffer)
-	if err := ihttp.GetBody(nil, r.u.String(), body, r.lang...); err != nil {
+	if err := ihttp.GetBody(nil, r.TitleURL(), body, r.lang...); err != nil {
 		return nil, err
 	}
 
@@ -171,19 +200,15 @@ func (r *Controller) Scrape() (*tags.Movie, error) {
 
 func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 	global.Log.Debug("Scraping credits page")
-	fetchFullCredits := func(u string) (io.Reader, error) {
-		u, err := TitleUrl2CreditsUrl(r.u.String())
-		if err != nil {
-			return nil, err
-		}
+	fetchFullCredits := func() (io.Reader, error) {
 		body := new(bytes.Buffer)
-		if err := ihttp.GetBody(nil, u, body, r.lang...); err != nil {
+		if err := ihttp.GetBody(nil, r.CreditsURL(), body, r.lang...); err != nil {
 			return nil, err
 		}
 		return body, nil
 	}
 
-	body, err := fetchFullCredits(r.u.String())
+	body, err := fetchFullCredits()
 	if err != nil {
 		return fmt.Errorf("Fullcredits: Could not fetch page: %s", err)
 	}
@@ -203,7 +228,7 @@ func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 func (r *Controller) scrapeKeywordPage(movie *tags.Movie) error {
 	//Parse keyword page
 	global.Log.Debug("Scraping keyword page")
-	keywords, err := ParseKeywordPage(r.u.String()+"keywords", r.PreferredLang())
+	keywords, err := ParseKeywordPage(r.KeywordsURL(), r.PreferredLang())
 	if err != nil {
 		return err
 	}

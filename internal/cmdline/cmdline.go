@@ -25,7 +25,7 @@ func Parse() (*Flags, error) {
 	f := &Flags{Loglevel: logger.LevelFlag(global.DefaultLoglevel)}
 	f.LegalInfo = flag.Bool("print-legal-info", false, "Print legal information and exit.")
 	f.Out = flag.String("o", "", "Sets the output file.")
-	f.rawLang = flag.String("lang", "en-US", "Sets the preferred language(s) for http requests. Multiple languages are separated by a colon.")
+	f.rawLang = flag.String("lang", "", "Sets the preferred language(s) for http requests. Multiple languages are separated by a colon.")
 	f.Opts = flag.String("opts", "", "Scraper-specific options, separated by a colon.")
 	flag.Var(&f.Loglevel, "loglevel", "set the logging verbosity.")
 	flag.Parse()
@@ -38,6 +38,10 @@ func Parse() (*Flags, error) {
 }
 
 func (r *Flags) parseLang() error {
+	if r.rawLang == nil || *r.rawLang == "" {
+		r.Lang = make([]*lcconv.LngCntry, 0)
+		return nil
+	}
 	rawLangs := strings.Split(*r.rawLang, ":")
 	langs := make([]*lcconv.LngCntry, len(rawLangs))
 	for i, rawLang := range rawLangs {

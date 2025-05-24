@@ -21,7 +21,7 @@ type LngCntry struct {
 func NewLngCntry(input string) (*LngCntry, error) {
 	splitted := strings.Split(input, "-")
 	if len(splitted) != 2 {
-		return nil, errors.New("Invalid input")
+		return nil, errors.New("Expected language and country separated by \"-\"")
 	}
 	lng := splitted[0]
 	cntry := splitted[1]
