@@ -68,3 +68,12 @@ Additionally scrapes IMDB's fullcredits page for the given movie if enabled. Dis
 
 If enabled, the data source for the title page information will be the embedded json-ld data instead of the title page itself.	Can be used as a backup if the normal title page scraper fails. Disabled by default.
 
+### IMDB scraper issues and limitations
+
+If you use the option `keywords=1`, only the first 50 keywords will be scraped. Scraping all keywords would require javascript interpretation and will therefore never be supported.
+
+IMDB frequently update their website to make it harder to scrape. It might be that this scraper will stop working sometimes in the future.
+
+### IMDB scraper troubleshooting
+
+The IMDB scraper often breaks after IMDB website updates. You might try the option `jsonld=1` to work around this. Feel free to file an issue if you encountered such a problem.
