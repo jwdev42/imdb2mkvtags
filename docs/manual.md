@@ -10,7 +10,20 @@ Generate the tags for the movie *Trading Places*, also include full credits and 
 
 imdb2mkvtags scrapes information off the [internet movie database](<https://www.imdb.com/>) and writes it as a xml file containing matroska tags. This xml file can be processed by [MKVToolNix](<https://mkvtoolnix.download/>)	to tag mkv files.
 
-### Options
+## IMDB scraper module
+
+The IMDB scraper module will be used on the following input URLs:
+
+- `{"http"|"https"}://www.imdb.com/title/{MOVIEID}`
+- `{"http"|"https"}://www.imdb.com/{LANGUAGE}/title/{MOVIEID}`
+- `imdb://{MOVIEID}`
+
+| Token    | Description |
+| -------- | ------- |
+| MOVIEID  | The IMDB movie ID, a string that starts with `tt` and is followed by an integer. Example: `tt1136608` for the movie *District 9*. |
+| LANGUAGE | ISO 639-1 language code. Examples: `en` for *English*, `de` for *German*. |
+
+### IMDB scraper options
 
 #### \-lang *language*
 
