@@ -37,23 +37,35 @@ type Controller struct {
 }
 
 func NewController(rawurl string) (*Controller, error) {
+	const urlValidationFailed = "IMDB URL validation failed"
 	u, err := url.Parse(rawurl)
 	if err != nil {
 		return nil, err
 	}
-	// set american english as default language
+	// Set american english as default language
 	defaultLang, err := lcconv.NewLngCntry("en-US")
 	if err != nil {
 		panic("invalid default language hardcoded into the program")
 	}
-	// create controller
+	// Create controller
 	cntrl := &Controller{
 		urlScheme:   u.Scheme,
 		o:           new(options),
 		lang:        make([]*lcconv.LngCntry, 0),
 		defaultLang: defaultLang,
 	}
-	// validate url
+	// Validate url
+	if u.Scheme == "imdb" {
+		// Handling special scheme "imdb://"
+		if !IsTitleID(u.Host) {
+			global.Log.Errorf("The URL's host name must be a valid IMDB movie ID when scheme %q is in use", u.Scheme)
+			return nil, errors.New(urlValidationFailed)
+		}
+		cntrl.urlScheme = "https"
+		cntrl.titleID = u.Host
+		return cntrl, nil
+	}
+	// Handling normal URLs
 	if !path.IsAbs(u.Path) {
 		return nil, errors.New("IMDB URL must have an absolute path")
 	}
@@ -63,9 +75,8 @@ func NewController(rawurl string) (*Controller, error) {
 	} else if len(path) >= 3 && path[1] == "title" && IsTitleID(path[2]) {
 		cntrl.titleID = path[2]
 	} else {
-		return nil, errors.New("IMDB URL validation failed")
+		return nil, errors.New(urlValidationFailed)
 	}
-	global.Log.Debug(fmt.Sprintf("IMDB controller: New controller for title \"%s\"", cntrl.titleID))
 	return cntrl, nil
 }
 

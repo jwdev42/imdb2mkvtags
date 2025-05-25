@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
 	"github.com/jwdev42/imdb2mkvtags/internal/cmdline"
 	"github.com/jwdev42/imdb2mkvtags/internal/global"
@@ -29,32 +28,35 @@ func Pick(rawurl string) (Controller, error) {
 	if err := validateUrlScheme(u.Scheme); err != nil {
 		if _, ok := err.(EmptyUrlScheme); ok {
 			u.Scheme = "https"
-			global.Log.Notice("Url scheme was empty, will try again using \"https\"")
+			global.Log.Noticef("No URL scheme provided, using default %q", u.Scheme)
 			return Pick(u.String())
 		} else {
 			return nil, fmt.Errorf("Input url: %s", err)
 		}
 	}
-
-	switch u.Host {
-	case "imdb.com":
-		fallthrough
-	case "www.imdb.com":
+	// Pick by scheme first
+	switch u.Scheme {
+	case "imdb":
 		return imdb.NewController(u.String())
+	}
+	// Pick by host when no special scheme was found
+	switch u.Host {
+	case "imdb.com", "www.imdb.com":
+		return imdb.NewController(u.String())
+	case "themoviedb.org", "www.themoviedb.org":
+		global.Log.Die("TMDB is not supported yet")
 	case "epsteindidntkillhimself.com":
 		global.Log.Die("Epstein didn’t kill himself")
 	}
-	return nil, errors.New("Input url: Host not supported")
+	return nil, fmt.Errorf("Scraping host %q is not supported")
 }
 
 func validateUrlScheme(scheme string) error {
 	switch scheme {
-	//begin whitelist
-	case "http":
-		fallthrough
-	case "https":
+	// allowed
+	case "http", "https", "imdb":
 		return nil
-	//begin blacklist
+	// denied
 	case "":
 		return EmptyUrlScheme("Empty url scheme detected")
 	default:
