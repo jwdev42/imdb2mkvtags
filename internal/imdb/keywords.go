@@ -18,10 +18,10 @@ type Keyword struct {
 	Votes int
 }
 
-func ParseKeywordPage(url string, lang *lcconv.LngCntry) ([]Keyword, error) {
+func ParseKeywordPage(userAgent, url string, lang *lcconv.LngCntry) ([]Keyword, error) {
 	//Fetch document
 	body := new(bytes.Buffer)
-	if err := ihttp.GetBody(nil, url, body, lang); err != nil {
+	if err := ihttp.GetBody(nil, userAgent, url, body, lang); err != nil {
 		return nil, fmt.Errorf("Could not fetch keyword page: %s", err)
 	}
 	//Parse document

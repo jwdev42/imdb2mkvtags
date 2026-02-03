@@ -1,4 +1,4 @@
-//This file is part of imdb2mkvtags ©2022 Jörg Walter
+//This file is part of imdb2mkvtags ©2022 - 2026 Jörg Walter
 
 package imdb
 
@@ -19,12 +19,14 @@ import (
 	"time"
 )
 
-// IMDB-specific options passed via parameter "opts"
+// Holds IMDB-specific options passed via parameter "opts".
+// Also holds common opts that need to be known.
 type options struct {
 	UseJsonLD      bool
 	UseFullCredits bool
 	UseKeywords    bool
 	KeywordLimit   int
+	UserAgent      string // User Agent for HTTP client
 }
 
 type Controller struct {
@@ -126,7 +128,10 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 		return nil
 	}
 
-	//Parse scraper-specific options
+	// Set user agent
+	r.o.UserAgent = *flags.UserAgent
+
+	// Parse scraper-specific options
 	if flags.Opts != nil && *flags.Opts != "" {
 		pairs := strings.Split(*flags.Opts, global.DelimControllerArgs)
 		for _, pair := range pairs {
@@ -160,7 +165,7 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 		}
 	}
 
-	//Parse language option
+	// Parse language option
 	if flags.Lang != nil {
 		r.lang = flags.Lang
 	}
@@ -169,9 +174,9 @@ func (r *Controller) SetOptions(flags *cmdline.Flags) error {
 }
 
 func (r *Controller) Scrape() (*tags.Movie, error) {
-	//get title page
+	// get title page
 	body := new(bytes.Buffer)
-	if err := ihttp.GetBody(nil, r.TitleURL(), body, r.lang...); err != nil {
+	if err := ihttp.GetBody(nil, r.o.UserAgent, r.TitleURL(), body, r.lang...); err != nil {
 		return nil, err
 	}
 
@@ -213,7 +218,7 @@ func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 	global.Log.Debug("Scraping credits page")
 	fetchFullCredits := func() (io.Reader, error) {
 		body := new(bytes.Buffer)
-		if err := ihttp.GetBody(nil, r.CreditsURL(), body, r.lang...); err != nil {
+		if err := ihttp.GetBody(nil, r.o.UserAgent, r.CreditsURL(), body, r.lang...); err != nil {
 			return nil, err
 		}
 		return body, nil
@@ -237,27 +242,27 @@ func (r *Controller) scrapeFullCredits(movie *tags.Movie) error {
 }
 
 func (r *Controller) scrapeKeywordPage(movie *tags.Movie) error {
-	//Parse keyword page
+	// Parse keyword page
 	global.Log.Debug("Scraping keyword page")
-	keywords, err := ParseKeywordPage(r.KeywordsURL(), r.PreferredLang())
+	keywords, err := ParseKeywordPage(r.o.UserAgent, r.KeywordsURL(), r.PreferredLang())
 	if err != nil {
 		return err
 	}
-	//Set the limit of exported keywords if a limit was given
+	// Set the limit of exported keywords if a limit was given
 	var limit int
 	if r.o.KeywordLimit > 0 && r.o.KeywordLimit < len(keywords) {
 		limit = r.o.KeywordLimit
 	} else {
 		limit = len(keywords)
 	}
-	//Copy the requested amount of keywords into tag objects
+	// Copy the requested amount of keywords into tag objects
 	keywordsTag := make([]tags.MultiLingual, limit)
 	for i := 0; i < limit; i++ {
 		keywordsTag[i].Text = keywords[i].Name
-		keywordsTag[i].Lang = r.DefaultLang().ISO6391() //At the moment keywords are in english only, if IMDB changes that, it must also be changed here to PreferredLanguage().
+		keywordsTag[i].Lang = r.DefaultLang().ISO6391() // At the moment keywords are in english only, if IMDB changes that, it must also be changed here to PreferredLanguage().
 	}
 	global.Log.Debug(fmt.Sprintf("scrapeKeywordPage: Adding %d keywords", len(keywordsTag)))
-	//Deploy the keyword tags to the movie object
+	// Deploy the keyword tags to the movie object
 	movie.Keywords = keywordsTag
 	return nil
 }

@@ -1,4 +1,4 @@
-//This file is part of imdb2mkvtags ©2021-2022 Jörg Walter
+//This file is part of imdb2mkvtags ©2021-2026 Jörg Walter
 
 package http
 
@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"regexp"
 )
-
-const UserAgent = "imdb2mkvtags/1.0"
 
 var regexpLang = regexp.MustCompile("^[a-z]{2}(-[A-Z]{2})?$")
 var internalClient = new(http.Client) //Default client for this library.
@@ -37,12 +35,12 @@ func Body(client *http.Client, req *http.Request, dest io.Writer) error {
 }
 
 // Returns a new http request with default header fields
-func NewBareReq(method, url string, body io.Reader) (*http.Request, error) {
+func NewBareReq(userAgent, method, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept-Charset", "utf-8")
 	return req, nil
 }
@@ -71,8 +69,8 @@ func SetReqAccLang(req *http.Request, lang ...*lcconv.LngCntry) error {
 
 // Makes an HTTP request to URL url, writes the answer's body to dest. If client is nil the library's default client will be used.
 // If lang is not nil, the parameter will be used to set the request's Accept-Language parameter.
-func GetBody(client *http.Client, url string, dest io.Writer, lang ...*lcconv.LngCntry) error {
-	req, err := NewBareReq("GET", url, nil)
+func GetBody(client *http.Client, userAgent, url string, dest io.Writer, lang ...*lcconv.LngCntry) error {
+	req, err := NewBareReq(userAgent, "GET", url, nil)
 	if err != nil {
 		return err
 	}

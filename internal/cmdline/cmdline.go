@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const flagDefaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+
 // Structure that holds the parsed command line flags
 type Flags struct {
 	LegalInfo *bool //Print legal info?
@@ -17,6 +19,7 @@ type Flags struct {
 	Out       *string //output file
 	rawLang   *string //language-country combination(s)
 	Lang      []*lcconv.LngCntry
+	UserAgent *string  //Set custom user agent
 	Opts      *string  //options for the scraper
 	Tail      []string //non-processed args
 }
@@ -26,6 +29,7 @@ func Parse() (*Flags, error) {
 	f.LegalInfo = flag.Bool("print-legal-info", false, "Print legal information and exit.")
 	f.Out = flag.String("o", "", "Sets the output file.")
 	f.rawLang = flag.String("lang", "", "Sets the preferred language(s) for http requests. Multiple languages are separated by a colon.")
+	f.UserAgent = flag.String("user-agent", flagDefaultUserAgent, "Set the HTTP client's user agent to a custom value")
 	f.Opts = flag.String("opts", "", "Scraper-specific options, separated by a colon.")
 	flag.Var(&f.Loglevel, "loglevel", "set the logging verbosity.")
 	flag.Parse()
