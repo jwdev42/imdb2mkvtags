@@ -35,7 +35,7 @@ func NewCredits(r io.Reader) (*Credits, error) {
 func (r *Credits) Actors() ([]tags.Actor, error) {
 
 	//Get the cast subsection
-	table := r.elementByTestID("sub-section-cast")
+	table := r.elementByTestID("sub-section-amzn1.imdb.concept.name_credit_group.7caf7d16-5db9-4f4f-8864-d4c6e711c686")
 	if table == nil {
 		return nil, errors.New("No cast subsection found")
 	}
@@ -57,15 +57,15 @@ func (r *Credits) Actors() ([]tags.Actor, error) {
 }
 
 func (r *Credits) Directors() ([]tags.UniLingual, error) {
-	return r.scrapeUnilingualSubSection("sub-section-director")
+	return r.scrapeUnilingualSubSection("sub-section-amzn1.imdb.concept.name_credit_category.ace5cb4c-8708-4238-9542-04641e7c8171")
 }
 
 func (r *Credits) Producers() ([]tags.UniLingual, error) {
-	return r.scrapeUnilingualSubSection("sub-section-producer")
+	return r.scrapeUnilingualSubSection("sub-section-amzn1.imdb.concept.name_credit_category.0af123ce-1605-4a51-93cf-7ad477b11832")
 }
 
 func (r *Credits) Writers() ([]tags.UniLingual, error) {
-	return r.scrapeUnilingualSubSection("sub-section-writer")
+	return r.scrapeUnilingualSubSection("sub-section-amzn1.imdb.concept.name_credit_category.c84ecaff-add5-4f2e-81db-102a41881fe3")
 }
 
 func (r *Credits) actor(entry *html.Node) (*tags.Actor, error) {
